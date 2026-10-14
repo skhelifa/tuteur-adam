@@ -104,7 +104,7 @@ def speak_text(text: str):
     <script>
         window.speechSynthesis.cancel();
         var msg = new SpeechSynthesisUtterance("{clean_text}");
-        msg.lang = 'en-US';
+        msg.lang = 'fr-FR';
         window.speechSynthesis.speak(msg);
     </script>
     """
@@ -123,37 +123,37 @@ if "quiz_answers" not in st.session_state:
 
 
 def generate_qcm(course_title, system_prompt, chunks_text, number_questions=10):
-    prompt = f"""Create a practice exam with AT LEAST {number_questions} multiple-choice questions for a Grade 12 student in this course: {course_title}.
-Exam format:
-- Exactly {number_questions} questions.
-- Four options per question, labelled A, B, C, D.
-- Exactly one correct answer per question.
-- Questions should test understanding, application, and reasoning.
-- Use varied difficulty, from accessible to challenging.
-- Avoid duplicate questions and ambiguous wording.
-- Use the course excerpts when relevant.
-- If no excerpts are provided, use reliable general subject knowledge.
-- Do not claim this is an official exam.
-- Write the questions and options in English.
-- Include a short explanation and a helpful hint for every question.
+    prompt = f"""Crée un examen d'entraînement d'au moins {number_questions} questions à choix multiples (QCM) pour un élève de 12e année dans ce cours : {course_title}.
+Format de l'examen :
+- Exactement {number_questions} questions.
+- Quatre options par question, étiquetées A, B, C, D.
+- Exactement une seule bonne réponse par question.
+- Les questions doivent tester la compréhension, l'application et le raisonnement.
+- Utilise des difficultés variées, de accessible à exigeant.
+- Évite les questions en double et les formulations ambiguës.
+- Utilise les extraits du cours si pertinent.
+- Si aucun extrait n'est fourni, utilise des connaissances générales fiables.
+- Ne prétend pas qu'il s'agit d'un examen officiel.
+- Rédige toutes les questions, les options, les indices (hint) et les explications en français.
+- Inclus une courte explication et un indice utile pour chaque question.
 
-Use these course excerpts if relevant:
+Utilise ces extraits de cours si pertinent :
 {chunks_text}
 
-Return ONLY valid JSON in this exact structure:
+Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
 {{
   "questions": [
     {{
-      "question": "Question text",
+      "question": "Texte de la question",
       "options": {{
-        "A": "First option",
-        "B": "Second option",
-        "C": "Third option",
-        "D": "Fourth option"
+        "A": "Première option",
+        "B": "Deuxième option",
+        "C": "Troisième option",
+        "D": "Quatrième option"
       }},
       "correct": "A",
-      "hint": "A hint that does not reveal the answer",
-      "explanation": "Why the correct answer is correct"
+      "hint": "Un indice qui ne révèle pas la réponse",
+      "explanation": "Pourquoi la bonne réponse est correcte"
     }}
   ]
 }}"""
@@ -182,7 +182,7 @@ with st.sidebar:
     st.divider()
 
     st.header("🎯 Mode Examen (Quiz 10 Questions)")
-    st.caption("Génère un test complet de 10 questions avec correction et score final.")
+    st.caption("Génère un test complet de 10 questions en français avec correction et score final.")
     if st.button("🎲 Générer un quiz de 10 questions"):
         st.session_state.show_hint = False
         st.session_state.quiz_submitted = False
@@ -202,7 +202,7 @@ with st.sidebar:
                 except Exception:
                     continue
         chunks_text = "\n\n".join(all_chunks_temp[:3])
-        with st.spinner("Preparing Adam's 10-question practice exam..."):
+        with st.spinner("Préparation de l'examen d'entraînement d'Adam (10 questions)..."):
             quiz = generate_qcm(
                 course_name,
                 COURSES[course_name]["system"],
@@ -315,7 +315,7 @@ if audio_value is not None:
     audio_bytes = audio_value.getvalue()
     audio_hash = hashlib.sha256(audio_bytes).hexdigest()
     if audio_hash != st.session_state.processed_audio_hash:
-        with st.spinner("Transcribing your recording…"):
+        with st.spinner("Transcription de votre enregistrement…"):
             try:
                 transcript = client.audio.transcriptions.create(
                     model="whisper-1",
@@ -328,7 +328,7 @@ if audio_value is not None:
                 st.session_state.pending_audio_text = transcript.text.strip()
                 st.session_state.processed_audio_hash = audio_hash
             except Exception as exc:
-                st.error(f"Voice transcription failed: {exc}")
+                st.error(f"Échec de la transcription vocale : {exc}")
                 st.session_state.processed_audio_hash = audio_hash
 
 
@@ -337,32 +337,32 @@ if st.session_state.quiz_data:
     questions = st.session_state.quiz_data.get("questions", [])
     total = len(questions)
     st.divider()
-    st.subheader(f"🎯 Practice Exam — {course_name}")
-    st.write(f"**{total} questions** · One correct answer per question")
+    st.subheader(f"🎯 Examen d'entraînement — {course_name}")
+    st.write(f"**{total} questions** · Une seule réponse correcte par question")
 
     if not st.session_state.quiz_submitted:
         with st.form("qcm_exam_form"):
             user_answers = {}
             for i, item in enumerate(questions):
-                st.markdown(f"### Question {i + 1} of {total}")
+                st.markdown(f"### Question {i + 1} sur {total}")
                 st.write(item["question"])
                 option_labels = [
                     f"{letter}. {item['options'][letter]}"
                     for letter in ("A", "B", "C", "D")
                 ]
                 choice = st.radio(
-                    "Choose one answer:",
+                    "Choisis une réponse :",
                     option_labels,
                     index=None,
                     key=f"quiz_answer_{i}",
                 )
                 user_answers[i] = choice
-                with st.expander("💡 Need a hint?"):
-                    st.write(item.get("hint", "No hint available."))
+                with st.expander("💡 Besoin d'un indice ?"):
+                    st.write(item.get("hint", "Aucun indice disponible."))
                 st.divider()
 
             submitted = st.form_submit_button(
-                "✅ Submit exam and see my score",
+                "✅ Soumettre l'examen et voir mon score",
                 type="primary",
             )
 
@@ -423,20 +423,20 @@ for msg in history:
         st.markdown(msg["content"])
 
 if st.session_state.pending_audio_text:
-    st.info("Voice transcription — review it, then press Send.")
+    st.info("Transcription vocale — vérifie-la, puis clique sur Envoyer.")
     with st.form("voice_transcript_form", clear_on_submit=True):
         corrected_text = st.text_area(
-            "Your transcribed question",
+            "Votre question transcrite",
             value=st.session_state.pending_audio_text,
             height=100,
         )
-        submitted_voice = st.form_submit_button("Send question")
+        submitted_voice = st.form_submit_button("Envoyer la question")
     if submitted_voice and corrected_text.strip():
         st.session_state.pending_audio_text = None
         st.session_state.next_question = corrected_text.strip()
         st.rerun()
 
-typed_question = st.chat_input("Ask a question in English or French…")
+typed_question = st.chat_input("Pose une question en français ou en anglais…")
 question = typed_question
 if not question and st.session_state.get("next_question"):
     question = st.session_state.pop("next_question")
@@ -481,14 +481,14 @@ if question and question.strip():
     }] + history[-12:]
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking…"):
+        with st.spinner("Réflexion…"):
             try:
                 response = client.chat.completions.create(
                     model="gpt-4o-mini", messages=messages_for_api, temperature=0.4
                 )
                 answer = (
                     response.choices[0].message.content
-                    or "I couldn't generate an answer. Please try again."
+                    or "Je n'ai pas pu générer de réponse. Veuillez réessayer."
                 )
                 st.markdown(answer)
                 history.append({"role": "assistant", "content": answer})
@@ -497,7 +497,7 @@ if question and question.strip():
                     speak_text(answer)
 
             except Exception as exc:
-                st.error(f"An error occurred while generating the answer: {exc}")
+                st.error(f"Une erreur s'est produite lors de la génération de la réponse : {exc}")
 
     st.session_state.histories_by_course[course_name] = history
 

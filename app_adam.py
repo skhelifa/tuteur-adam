@@ -1,6 +1,7 @@
 from collections import Counter
 import hashlib
 import io
+import json
 import os
 from pathlib import Path
 import re
@@ -110,29 +111,52 @@ def speak_text(text: str):
     components.html(js_code, height=0)
 
 
-# Gestion des états du Quiz / QCM
+# Gestion des états du Quiz (10 questions)
 if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = None
 if "show_hint" not in st.session_state:
     st.session_state.show_hint = False
+if "quiz_submitted" not in st.session_state:
+    st.session_state.quiz_submitted = False
+if "quiz_answers" not in st.session_state:
+    st.session_state.quiz_answers = {}
 
 
-def generate_qcm(course_title, system_prompt, chunks_text):
-    prompt = f"""
-    As an expert tutor for the course: {course_title}, generate ONE multiple-choice question (QCM) with 4 options (A, B, C, D) suitable for Grade 12.
-    Use these course excerpts if relevant:
-    {chunks_text}
-    
-    You MUST format your response strictly using these tags:
-    QUESTION: [The question text]
-    A: [Option A]
-    B: [Option B]
-    C: [Option C]
-    D: [Option D]
-    CORRECT: [A, B, C, or D]
-    HINT: [A helpful Socratic hint that guides without revealing the answer]
-    EXPLANATION: [A brief explanation of why the correct answer is right]
-    """
+def generate_qcm(course_title, system_prompt, chunks_text, number_questions=10):
+    prompt = f"""Create a practice exam with AT LEAST {number_questions} multiple-choice questions for a Grade 12 student in this course: {course_title}.
+Exam format:
+- Exactly {number_questions} questions.
+- Four options per question, labelled A, B, C, D.
+- Exactly one correct answer per question.
+- Questions should test understanding, application, and reasoning.
+- Use varied difficulty, from accessible to challenging.
+- Avoid duplicate questions and ambiguous wording.
+- Use the course excerpts when relevant.
+- If no excerpts are provided, use reliable general subject knowledge.
+- Do not claim this is an official exam.
+- Write the questions and options in English.
+- Include a short explanation and a helpful hint for every question.
+
+Use these course excerpts if relevant:
+{chunks_text}
+
+Return ONLY valid JSON in this exact structure:
+{{
+  "questions": [
+    {{
+      "question": "Question text",
+      "options": {{
+        "A": "First option",
+        "B": "Second option",
+        "C": "Third option",
+        "D": "Fourth option"
+      }},
+      "correct": "A",
+      "hint": "A hint that does not reveal the answer",
+      "explanation": "Why the correct answer is correct"
+    }}
+  ]
+}}"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -142,32 +166,14 @@ def generate_qcm(course_title, system_prompt, chunks_text):
             ],
             temperature=0.7,
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.endswith("```"):
+            content = content[:-3]
+        return json.loads(content.strip())
     except Exception:
         return None
-
-
-def parse_qcm(text):
-    lines = text.split("\n")
-    q, a, b, c, d, correct, hint, explanation = "", "", "", "", "", "", "", ""
-    for line in lines:
-        if line.startswith("QUESTION:"):
-            q = line.replace("QUESTION:", "").strip()
-        elif line.startswith("A:"):
-            a = line.replace("A:", "").strip()
-        elif line.startswith("B:"):
-            b = line.replace("B:", "").strip()
-        elif line.startswith("C:"):
-            c = line.replace("C:", "").strip()
-        elif line.startswith("D:"):
-            d = line.replace("D:", "").strip()
-        elif line.startswith("CORRECT:"):
-            correct = line.replace("CORRECT:", "").strip()
-        elif line.startswith("HINT:"):
-            hint = line.replace("HINT:", "").strip()
-        elif line.startswith("EXPLANATION:"):
-            explanation = line.replace("EXPLANATION:", "").strip()
-    return q, [a, b, c, d], correct, hint, explanation
 
 
 with st.sidebar:
@@ -175,10 +181,11 @@ with st.sidebar:
     course_name = st.selectbox("Active course", list(COURSES.keys()))
     st.divider()
 
-    st.header("🎯 Mode Quiz & QCM")
-    st.caption("Teste tes connaissances avec un QCM interactif.")
-    if st.button("🎲 Générer un QCM"):
+    st.header("🎯 Mode Examen (Quiz 10 Questions)")
+    st.caption("Génère un test complet de 10 questions avec correction et score final.")
+    if st.button("🎲 Générer un quiz de 10 questions"):
         st.session_state.show_hint = False
+        st.session_state.quiz_submitted = False
         folder_path = DOCS_DIR / COURSES[course_name]["folder"]
         all_chunks_temp = []
         if folder_path.exists():
@@ -188,17 +195,25 @@ with st.sidebar:
                     full_text = "\n".join(
                         (page.extract_text() or "") for page in reader.pages
                     )
-                    all_chunks_temp.append(full_text[:2000])
+                    if full_text.strip():
+                        all_chunks_temp.append(
+                            f"\n{full_text[:6000]}"
+                        )
                 except Exception:
-                    pass
-        chunks_text = "\n".join(all_chunks_temp[:2])
-        raw_qcm = generate_qcm(
-            course_name, COURSES[course_name]["system"], chunks_text
-        )
-        if raw_qcm:
-            st.session_state.quiz_data = parse_qcm(raw_qcm)
+                    continue
+        chunks_text = "\n\n".join(all_chunks_temp[:3])
+        with st.spinner("Preparing Adam's 10-question practice exam..."):
+            quiz = generate_qcm(
+                course_name,
+                COURSES[course_name]["system"],
+                chunks_text,
+                number_questions=10,
+            )
+        if quiz:
+            st.session_state.quiz_data = quiz
+            st.session_state.quiz_submitted = False
         else:
-            st.error("Impossible de générer le QCM pour l'instant.")
+            st.error("Impossible de générer le quiz. Réessaie !")
 
     st.divider()
     st.header("🔊 Audio Output")
@@ -316,45 +331,93 @@ if audio_value is not None:
                 st.error(f"Voice transcription failed: {exc}")
                 st.session_state.processed_audio_hash = audio_hash
 
-# --- AFFICHAGE DU QUIZ ACTIF ---
+
+# --- DISPLAY THE FULL MULTIPLE-CHOICE EXAM ---
 if st.session_state.quiz_data:
-    q_text, options, correct_ans, hint_text, explanation_text = (
-        st.session_state.quiz_data
-    )
-    if q_text:
-        with st.container():
-            st.markdown(f"### 🎯 Quiz — {course_name}")
-            st.info(f"**Question :** {q_text}")
+    questions = st.session_state.quiz_data.get("questions", [])
+    total = len(questions)
+    st.divider()
+    st.subheader(f"🎯 Practice Exam — {course_name}")
+    st.write(f"**{total} questions** · One correct answer per question")
 
-            with st.form("qcm_form"):
-                choice = st.radio("Choisis une réponse :", options, index=None)
-                submitted_qcm = st.form_submit_button("Valider ma réponse")
+    if not st.session_state.quiz_submitted:
+        with st.form("qcm_exam_form"):
+            user_answers = {}
+            for i, item in enumerate(questions):
+                st.markdown(f"### Question {i + 1} of {total}")
+                st.write(item["question"])
+                option_labels = [
+                    f"{letter}. {item['options'][letter]}"
+                    for letter in ("A", "B", "C", "D")
+                ]
+                choice = st.radio(
+                    "Choose one answer:",
+                    option_labels,
+                    index=None,
+                    key=f"quiz_answer_{i}",
+                )
+                user_answers[i] = choice
+                with st.expander("💡 Need a hint?"):
+                    st.write(item.get("hint", "No hint available."))
+                st.divider()
 
-            if submitted_qcm:
-                if choice:
-                    selected_letter = choice[0].upper()
-                    if selected_letter == correct_ans.upper():
-                        st.success(f"✅ Correct ! {explanation_text}")
-                    else:
-                        st.error(
-                            f"❌ Incorrect. La bonne réponse était **{correct_ans}**."
-                            f" {explanation_text}"
-                        )
+            submitted = st.form_submit_button(
+                "✅ Submit exam and see my score",
+                type="primary",
+            )
+
+        if submitted:
+            st.session_state.quiz_answers = user_answers
+            st.session_state.quiz_submitted = True
+            st.rerun()
+
+    else:
+        score = 0
+        user_answers = st.session_state.quiz_answers
+        st.markdown("### 📊 Résultats détaillés de ton examen :")
+        for i, item in enumerate(questions):
+            ans = user_answers.get(i)
+            correct_letter = item["correct"].upper()
+            st.markdown(f"**Question {i + 1} : {item['question']}**")
+
+            if ans:
+                selected_letter = ans[0].upper()
+                if selected_letter == correct_letter:
+                    score += 1
+                    st.success(
+                        f"✅ Correct ! Ta réponse : {ans}\n\n*{item['explanation']}*"
+                    )
                 else:
-                    st.warning("Veuillez sélectionner une option avant de valider.")
+                    st.error(
+                        f"❌ Incorrect. Ta réponse : {ans} | Bonne réponse : **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*"
+                    )
+            else:
+                st.warning(
+                    f"⚠️ Sans réponse. La bonne réponse était **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*"
+                )
+            st.markdown("---")
 
-            if st.button("💡 Besoin d'un indice (Hint) ?"):
-                st.session_state.show_hint = True
+        percentage = (score / total) * 100 if total > 0 else 0
+        st.markdown(f"## 🏆 Ton Score Final : {score} / {total} ({percentage:.0f}%)")
 
-            if st.session_state.show_hint and hint_text:
-                st.warning(f"💡 **Indice :** {hint_text}")
+        if score >= 8:
+            st.balloons()
+            st.success("🎉 Excellent travail ! Tu maîtrises parfaitement ton sujet.")
+        elif score >= 5:
+            st.info("👍 Bon effort ! Encore quelques révisions et ce sera parfait.")
+        else:
+            st.warning("💡 Prends le temps de revoir les notions avec le tuteur socratique pour progresser !")
 
-            if st.button("Fermer le quiz"):
-                st.session_state.quiz_data = None
-                st.session_state.show_hint = False
-                st.rerun()
-        st.divider()
+        if st.button("🔄 Recommencer un nouveau quiz"):
+            st.session_state.quiz_data = None
+            st.session_state.quiz_submitted = False
+            st.session_state.quiz_answers = {}
+            st.rerun()
 
+    st.divider()
+
+
+# Affichage de l'historique du chat normal
 for msg in history:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])

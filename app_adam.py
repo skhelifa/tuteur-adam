@@ -91,7 +91,7 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 
-# Fonction pour l'Option 2 (Synthèse vocale du navigateur)
+# Fonction pour la synthèse vocale du navigateur (Option 2)
 def speak_text(text: str):
   clean_text = (
       text.replace("'", "\\'")
@@ -110,29 +110,106 @@ def speak_text(text: str):
   components.html(js_code, height=0)
 
 
+# Gestion des états du Quiz / QCM
+if "quiz_data" not in st.session_state:
+  st.session_state.quiz_data = None
+if "show_hint" not in st.session_state:
+  st.session_state.show_hint = False
+if "quiz_answered" not in st.session_state:
+  st.session_state.quiz_answered = False
+
+
+def generate_qcm(course_title, system_prompt, chunks_text):
+  prompt = f"""
+    As an expert tutor for the course: {course_title}, generate ONE multiple-choice question (QCM) with 4 options (A, B, C, D) suitable for Grade 12.
+    Use these course excerpts if relevant:
+    {chunks_text}
+    
+    You MUST format your response strictly using these tags:
+    QUESTION: [The question text]
+    A: [Option A]
+    B: [Option B]
+    C: [Option C]
+    D: [Option D]
+    CORRECT: [A, B, C, or D]
+    HINT: [A helpful Socratic hint that guides without revealing the answer]
+    EXPLANATION: [A brief explanation of why the correct answer is right]
+    """
+  try:
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.7,
+    )
+    return response.choices[0].message.content
+  except Exception as exc:
+    return None
+
+
+def parse_qcm(text):
+  lines = text.split("\n")
+  q, a, b, c, d, correct, hint, explanation = "", "", "", "", "", "", "", ""
+  for line in lines:
+    if line.startswith("QUESTION:"):
+      q = line.replace("QUESTION:", "").strip()
+    elif line.startswith("A:"):
+      a = line.replace("A:", "").strip()
+    elif line.startswith("B:"):
+      b = line.replace("B:", "").strip()
+    elif line.startswith("C:"):
+      c = line.replace("C:", "").strip()
+    elif line.startswith("D:"):
+      d = line.replace("D:", "").strip()
+    elif line.startswith("CORRECT:"):
+      correct = line.replace("CORRECT:", "").strip()
+    elif line.startswith("HINT:"):
+      hint = line.replace("HINT:", "").strip()
+    elif line.startswith("EXPLANATION:"):
+      explanation = line.replace("EXPLANATION:", "").strip()
+  return q, [a, b, c, d], correct, hint, explanation
+
+
 with st.sidebar:
   st.header("📚 Choose a course")
   course_name = st.selectbox("Active course", list(COURSES.keys()))
   st.divider()
 
-  st.header("🔊 Audio Output (Adam's mode)")
-  enable_voice_output = st.checkbox(
-      "Lecture vocale automatique (Option 2)", value=True
-  )
-  st.caption("Lit la réponse du tuteur à voix haute via le navigateur.")
+  st.header("🎯 Mode Quiz & QCM")
+  st.caption("Teste tes connaissances avec un QCM interactif.")
+  if st.button("🎲 Générer un QCM"):
+    st.session_state.show_hint = False
+    st.session_state.quiz_answered = False
+    folder_path = DOCS_DIR / COURSES[course_name]["folder"]
+    all_chunks_temp = []
+    if folder_path.exists():
+      for pdf_path in sorted(folder_path.glob("*.pdf")):
+        try:
+          reader = PdfReader(str(pdf_path))
+          full_text = "\n".join(
+              (page.extract_text() or "") for page in reader.pages
+          )
+          all_chunks_temp.append(full_text[:2000])
+        except:
+          pass
+    chunks_text = "\n".join(all_chunks_temp[:2])
+    raw_qcm = generate_qcm(
+        course_name, COURSES[course_name]["system"], chunks_text
+    )
+    if raw_qcm:
+      st.session_state.quiz_data = parse_qcm(raw_qcm)
+    else:
+      st.error("Impossible de générer le QCM pour l'instant.")
+
+  st.divider()
+  st.header("🔊 Audio Output")
+  enable_voice_output = st.checkbox("Lecture vocale automatique", value=True)
   st.divider()
 
   st.header("🎤 Voice input")
-  st.caption(
-      "Record a short question. Check the transcription before relying on it."
-  )
   audio_value = st.audio_input("Record your question")
-  st.divider()
-  st.caption(
-      "Course documents are retrieved from PDFs placed in this app's documents"
-      " folders."
-  )
-  st.caption("Your questions are sent to the AI service to generate responses.")
 
 course = COURSES[course_name]
 folder = DOCS_DIR / course["folder"]
@@ -144,7 +221,6 @@ def load_pdf_chunks(folder_string: str):
   chunks = []
   if not folder_path.exists():
     return chunks
-
   for pdf_path in sorted(folder_path.glob("*.pdf")):
     try:
       reader = PdfReader(str(pdf_path))
@@ -289,92 +365,23 @@ if audio_value is not None:
         st.error(f"Voice transcription failed: {exc}")
         st.session_state.processed_audio_hash = audio_hash
 
-for msg in history:
-  with st.chat_message(msg["role"]):
-    st.markdown(msg["content"])
+# --- AFFICHAGE DU QUIZ ACTIF ---
+if st.session_state.quiz_data:
+  q_text, options, correct_ans, hint_text, explanation_text = (
+      st.session_state.quiz_data
+  )
+  if q_text:
+    with st.container():
+      st.markdown(f"### 🎯 Quiz — {course_name}")
+      st.info(f"**Question :** {q_text}")
 
-if st.session_state.pending_audio_text:
-  st.info("Voice transcription — review it, then press Send.")
-  with st.form("voice_transcript_form", clear_on_submit=True):
-    corrected_text = st.text_area(
-        "Your transcribed question",
-        value=st.session_state.pending_audio_text,
-        height=100,
-    )
-    submitted_voice = st.form_submit_button("Send question")
-  if submitted_voice and corrected_text.strip():
-    st.session_state.pending_audio_text = None
-    st.session_state.next_question = corrected_text.strip()
-    st.rerun()
+      with st.form("qcm_form"):
+        choice = st.radio("Choisis une réponse :", options, index=None)
+        submitted_qcm = st.form_submit_button("Valider ma réponse")
 
-typed_question = st.chat_input("Ask a question in English or French…")
-question = typed_question
-if not question and st.session_state.get("next_question"):
-  question = st.session_state.pop("next_question")
-
-if question and question.strip():
-  question = question.strip()
-  history.append({"role": "user", "content": question})
-  with st.chat_message("user"):
-    st.markdown(question)
-
-  all_chunks = load_pdf_chunks(str(folder))
-  relevant = retrieve_chunks(question, all_chunks)
-  if relevant:
-    excerpts = "\n\n".join(
-        f"[Source file: {item['source']}]\n{item['text']}" for item in relevant
-    )
-    context_block = (
-        "The following are excerpts retrieved from local course PDFs. Use them"
-        " when relevant, cite the source filename in your response, and say"
-        " when they do not answer the question. Do not invent quotations.\n\n"
-        + excerpts
-    )
-    st.caption(
-        "Course references used: "
-        + ", ".join(sorted({item["source"] for item in relevant}))
-    )
-  else:
-    context_block = (
-        "No relevant passage was retrieved from the local course PDFs for this"
-        " question. Answer helpfully from general knowledge, but do not claim"
-        " to be quoting an official course document."
-    )
-    if not all_chunks:
-      st.caption(
-          "No course PDFs have been added for this subject yet; the tutor is"
-          " currently using its course instructions and general knowledge."
-      )
-
-  messages_for_api = [{
-      "role": "system",
-      "content": course["system"] + "\n\n" + context_block,
-  }] + history[-12:]
-
-  with st.chat_message("assistant"):
-    with st.spinner("Thinking…"):
-      try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini", messages=messages_for_api, temperature=0.4
-        )
-        answer = (
-            response.choices[0].message.content
-            or "I couldn't generate an answer. Please try again."
-        )
-        st.markdown(answer)
-        history.append({"role": "assistant", "content": answer})
-
-        # Déclenchement de l'Option 2 (lecture audio du navigateur) si activée
-        if enable_voice_output:
-          speak_text(answer)
-
-      except Exception as exc:
-        st.error(f"An error occurred while generating the answer: {exc}")
-
-  st.session_state.histories_by_course[course_name] = history
-
-st.divider()
-st.caption(
-    "Made with care by Dad ❤️ · Keep asking questions, practise, and build"
-    " your own understanding."
-)
+      if submitted_qcm:
+        if choice:
+          selected_letter = choice[0].upper()
+          if selected_letter == correct_ans.upper():
+            st.success(f"✅ Correct ! {explanation_text}")
+          else:

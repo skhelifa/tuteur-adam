@@ -27,14 +27,12 @@ COURSES = {
             " or a question from class."
         ),
         "system": """
-You are Adam's patient, rigorous Grade 12 Biology 40S tutor at Collège Louis-Riel in Manitoba.
-Teach primarily in English. If Adam asks in French or says he is confused, explain the difficult idea in French, then return to English practice.
-Use a Socratic approach: ask one manageable question at a time, give hints before full solutions, check understanding with a new example, and correct misconceptions kindly.
-Relevant Manitoba Biology 12 themes include genetic transmission, mechanisms of heredity, evolution and biodiversity, organization of biodiversity, and biodiversity conservation.
-When retrieved course-document excerpts are supplied, prioritize them and identify the source filename in your answer. Never claim that a statement is from an official Manitoba document unless the supplied excerpts support it.
-If no relevant excerpt is supplied, answer from general biology knowledge and be transparent that you are not quoting a retrieved course document.
-For homework, help Adam understand and construct his own answer; do not simply complete an assessed assignment without explanation.
-Use clear headings, concise explanations, examples, and accurate scientific vocabulary.
+You are Adam's patient, rigorous Grade 12 Biology 40S tutor at Collège Louis-Riel in Manitoba (DSFM standards).
+Teach primarily in English or French depending on Adam's prompt. Use a Socratic approach: ask one manageable question at a time, give hints before full solutions, and correct misconceptions kindly.
+At the end of your response, always propose 2 helpful Copilot-style follow-up options:
+1. A suggested YouTube search query or video topic for visual learning.
+2. A suggestion to explore a diagram or schema.
+When retrieved course-document excerpts are supplied, prioritize them and identify the source filename.
 """,
     },
     "English — Comprehensive Focus 40S": {
@@ -46,11 +44,8 @@ Use clear headings, concise explanations, examples, and accurate scientific voca
         ),
         "system": """
 You are Adam's supportive Grade 12 English Language Arts tutor for Comprehensive Focus 40S in Manitoba.
-Use English by default. If Adam is stuck, explain the strategy briefly in French, then provide an English example and invite him to try.
-Comprehensive Focus gives substantial attention to both literary and transactional texts. Support reading comprehension, thesis statements, evidence and quotation integration, paragraph structure, argumentation, tone, voice, rhetorical choices, grammar, editing, and revision.
-Ask what the assignment asks and what Adam has tried. Teach a repeatable process; do not invent a teacher's rubric or pretend to know an assignment's requirements unless Adam supplies them.
-When documents are retrieved, prioritize them and name the source filename. If no course document is available, be clear that the advice is general.
-When giving writing feedback, identify a few high-impact improvements, explain why, and offer a revised example without erasing Adam's own voice.
+Support reading comprehension, thesis statements, evidence and quotation integration, paragraph structure, and revision.
+At the end of your response, propose Copilot-style follow-up options (e.g., writing templates, strategy videos, or stylistic examples).
 """,
     },
     "Cinema — Witness to Modern History 40S": {
@@ -61,11 +56,8 @@ When giving writing feedback, identify a few high-impact improvements, explain w
         ),
         "system": """
 You are Adam's Grade 12 tutor for the Manitoba course “Le cinéma, témoin de l'histoire moderne 40S”.
-Teach primarily in English, but explain difficult concepts in French if Adam requests it.
-Help him analyze cinema as an art form, a historical artifact, and an interpreter of history. Focus on historical context, point of view, representation, evidence, film techniques, bias, omissions, historical thinking, and critical media literacy.
-Do not treat a film as a transparent or perfectly accurate record of the past: distinguish what the film depicts from what historians can substantiate.
-When retrieved official course excerpts are supplied, prioritize them and cite their source filename. Do not claim that an idea is an official course requirement unless the excerpt supports it.
-For essays, guide Adam through a claim, evidence, analysis, and connection to historical context. Ask one question at a time and support his independent thinking.
+Help him analyze cinema as an art form, historical artifact, and interpreter of history.
+At the end of your response, propose Copilot-style follow-up options (e.g., historical documentary links on YouTube, scene analysis breakdown).
 """,
     },
 }
@@ -74,10 +66,10 @@ st.set_page_config(
     page_title="Adam's Study Tutor", page_icon="🎓", layout="centered"
 )
 st.title("🎓 Adam's Study Tutor")
-st.caption("Collège Louis-Riel · Grade 12 · 40S")
+st.caption("Collège Louis-Riel · Grade 12 · 40S (DSFM)")
 st.info(
-    "Use this tutor to understand your courses, practise, and prepare for"
-    " assessments. Always follow your teacher's assignment instructions."
+    "Utilise ce tuteur pour comprendre tes cours, t'entraîner avec des quiz et"
+    " préparer tes examens. Suis toujours les consignes de tes enseignants."
 )
 
 api_key = st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None
@@ -123,21 +115,15 @@ if "quiz_answers" not in st.session_state:
 
 
 def generate_qcm(course_title, system_prompt, chunks_text, number_questions=10):
-    prompt = f"""Crée un examen d'entraînement d'au moins {number_questions} questions à choix multiples (QCM) pour un élève de 12e année dans ce cours : {course_title}.
+    prompt = f"""Crée un examen d'entraînement d'exactement {number_questions} questions à choix multiples (QCM) pour un élève de 12e année basé sur les standards de la DSFM et du Manitoba pour le cours : {course_title}.
 Format de l'examen :
 - Exactement {number_questions} questions.
 - Quatre options par question, étiquetées A, B, C, D.
-- Exactement une seule bonne réponse par question.
-- Les questions doivent tester la compréhension, l'application et le raisonnement.
-- Utilise des difficultés variées, de accessible à exigeant.
-- Évite les questions en double et les formulations ambiguës.
-- Utilise les extraits du cours si pertinent.
-- Si aucun extrait n'est fourni, utilise des connaissances générales fiables.
-- Ne prétend pas qu'il s'agit d'un examen officiel.
-- Rédige toutes les questions, les options, les indices (hint) et les explications en français.
+- Une seule bonne réponse par question.
+- Rédige toutes les questions, options, indices et explications en français.
 - Inclus une courte explication et un indice utile pour chaque question.
 
-Utilise ces extraits de cours si pertinent :
+Utilise ces extraits de cours / anciens examens si pertinent :
 {chunks_text}
 
 Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
@@ -152,8 +138,8 @@ Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
         "D": "Quatrième option"
       }},
       "correct": "A",
-      "hint": "Un indice qui ne révèle pas la réponse",
-      "explanation": "Pourquoi la bonne réponse est correcte"
+      "hint": "Un indice utile",
+      "explanation": "Explication détaillée"
     }}
   ]
 }}"""
@@ -177,12 +163,12 @@ Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
 
 
 with st.sidebar:
-    st.header("📚 Choose a course")
-    course_name = st.selectbox("Active course", list(COURSES.keys()))
+    st.header("📚 Choisir un cours")
+    course_name = st.selectbox("Matière active", list(COURSES.keys()))
     st.divider()
 
-    st.header("🎯 Mode Examen (Quiz 10 Questions)")
-    st.caption("Génère un test complet de 10 questions en français avec correction et score final.")
+    st.header("🎯 Mode Examen (10 Questions)")
+    st.caption("Génère un test blanc basé sur les programmes du Manitoba.")
     if st.button("🎲 Générer un quiz de 10 questions"):
         st.session_state.show_hint = False
         st.session_state.quiz_submitted = False
@@ -196,13 +182,11 @@ with st.sidebar:
                         (page.extract_text() or "") for page in reader.pages
                     )
                     if full_text.strip():
-                        all_chunks_temp.append(
-                            f"\n{full_text[:6000]}"
-                        )
+                        all_chunks_temp.append(f"\n{full_text[:6000]}")
                 except Exception:
                     continue
         chunks_text = "\n\n".join(all_chunks_temp[:3])
-        with st.spinner("Préparation de l'examen d'entraînement d'Adam (10 questions)..."):
+        with st.spinner("Préparation de l'examen d'entraînement d'Adam..."):
             quiz = generate_qcm(
                 course_name,
                 COURSES[course_name]["system"],
@@ -221,7 +205,7 @@ with st.sidebar:
     st.divider()
 
     st.header("🎤 Voice input")
-    audio_value = st.audio_input("Record your question")
+    audio_value = st.audio_input("Enregistrer votre question")
 
 course = COURSES[course_name]
 folder = DOCS_DIR / course["folder"]
@@ -404,7 +388,7 @@ if st.session_state.quiz_data:
             st.balloons()
             st.success("🎉 Excellent travail ! Tu maîtrises parfaitement ton sujet.")
         elif score >= 5:
-            st.info("👍 Bon effort ! Encore quelques révisions et ce sera parfait.")
+            st.info("👍 Bon effort ! Encore quelques révisions et ce sarà parfait.")
         else:
             st.warning("💡 Prends le temps de revoir les notions avec le tuteur socratique pour progresser !")
 
@@ -436,9 +420,9 @@ if st.session_state.pending_audio_text:
         st.session_state.next_question = corrected_text.strip()
         st.rerun()
 
-typed_question = st.chat_input("Pose une question en français ou en anglais…")
+typed_question = st.chat_input("Pose une question en français ou en anglais… (demande des vidéos ou schémas !)")
 question = typed_question
-if not question and st.session_state.get("next_question"):
+if not question and st.session_state.get("not_question_key") and st.session_state.get("next_question"):
     question = st.session_state.pop("next_question")
 
 if question and question.strip():
@@ -454,30 +438,29 @@ if question and question.strip():
             f"[Source file: {item['source']}]\n{item['text']}" for item in relevant
         )
         context_block = (
-            "The following are excerpts retrieved from local course PDFs. Use them"
+            "The following are excerpts retrieved from local course PDFs (DSFM / Manitoba curriculum). Use them"
             " when relevant, cite the source filename in your response, and say"
-            " when they do not answer the question. Do not invent quotations.\n\n"
+            " when they do not answer the question.\n\n"
             + excerpts
         )
         st.caption(
-            "Course references used: "
+            "Références officielles utilisées : "
             + ", ".join(sorted({item["source"] for item in relevant}))
         )
     else:
         context_block = (
             "No relevant passage was retrieved from the local course PDFs for this"
-            " question. Answer helpfully from general knowledge, but do not claim"
-            " to be quoting an official course document."
+            " question. Answer helpfully from general Manitoba curriculum knowledge."
         )
         if not all_chunks:
             st.caption(
-                "No course PDFs have been added for this subject yet; the tutor is"
-                " currently using its course instructions and general knowledge."
+                "💡 Astuce : Dépose des PDF d'anciens examens DSFM ou du Manitoba dans le dossier documents pour enrichir le tuteur !"
             )
 
     messages_for_api = [{
         "role": "system",
-        "content": course["system"] + "\n\n" + context_block,
+        "content": course["system"] + "\n\n" + context_block + "\n\n"
+        "RAPPEL : À la fin de ta réponse, propose toujours à Adam deux suggestions interactives (style Copilot) : 1) Une suggestion de recherche de vidéo YouTube (ex: '🎥 Rechercher une vidéo YouTube sur...'), 2) Une suggestion pour voir un schéma/schéma visuel (ex: '🖼️ Voir un schéma explicatif de...').",
     }] + history[-12:]
 
     with st.chat_message("assistant"):

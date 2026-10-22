@@ -437,22 +437,23 @@ if st.session_state.pending_audio_text:
 # --- BOUTONS DE SUGGESTIONS RAPIDES (STYLE COPILOT) ---
 st.markdown("💡 **Suggestions rapides :**")
 col1, col2, col3, col4 = st.columns(4)
+btn_query = None
 with col1:
     if st.button("📖 Expliquer plus simplement"):
-        st.session_state.next_question = "Peux-tu m'expliquer cela plus simplement en français avec une analogie claire ?"
-        st.rerun()
+        btn_query = "Peux-tu m'expliquer cela plus simplement en français avec une analogie claire ?"
 with col2:
     if st.button("📝 Donner un exemple"):
-        st.session_state.next_question = "Peux-tu me donner un exemple concret issu du cours en français ?"
-        st.rerun()
+        btn_query = "Peux-tu me donner un exemple concret issu du cours en français ?"
 with col3:
     if st.button("🎥 Rechercher une vidéo"):
-        st.session_state.next_question = "Peux-tu me donner des liens de recherche YouTube cliquables pour illustrer ce concept ?"
-        st.rerun()
+        btn_query = "Peux-tu me donner des liens de recherche YouTube cliquables pour illustrer ce concept ?"
 with col4:
     if st.button("🖼️ Décrire un schéma"):
-        st.session_state.next_question = "Peux-tu me décrire un schéma visuel étape par étape en français ?"
-        st.rerun()
+        btn_query = "Peux-tu me décrire un schéma visuel étape par étape en français ?"
+
+if btn_query:
+    st.session_state.next_question = btn_query
+    st.rerun()
 
 typed_question = st.chat_input("Pose une question en français ou en anglais…")
 question = typed_question
@@ -491,11 +492,17 @@ if question and question.strip():
                 "💡 Astuce : Dépose des PDF d'anciens examens DSFM ou du Manitoba dans le dossier documents pour enrichir le tuteur !"
             )
 
+    # Filtrage crucial pour l'API : on enlève le message de bienvenue initial pour que l'API commence toujours par un message utilisateur
+    api_history = [
+        msg for msg in history 
+        if not (msg["role"] == "assistant" and msg["content"] == course["welcome"])
+    ]
+
     messages_for_api = [{
         "role": "system",
         "content": course["system"] + "\n\n" + context_block + "\n\n"
         "RAPPEL ABSOLU : Réponds EXCLUSIVEMENT en FRANÇAIS. À la fin de ta réponse, propose TOUJOURS de vrais liens cliquables Markdown vers YouTube (ex: [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...)) pour aider Adam à visualiser les concepts.",
-    }] + history[-12:]
+    }] + api_history[-12:]
 
     with st.chat_message("assistant"):
         with st.spinner("Réflexion…"):

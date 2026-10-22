@@ -22,42 +22,41 @@ COURSES = {
     "Biology 40S": {
         "folder": "biology",
         "welcome": (
-            "Hi Adam! Welcome to Biology 40S. What topic are you working on"
-            " today? We can review genetics, heredity, evolution, biodiversity,"
-            " or a question from class."
+            "Salut Adam ! Bienvenue en Biologie 40S. Sur quel sujet travailles-tu"
+            " aujourd'hui ? Nous pouvons revoir la génétique, l'hérédité, l'évolution,"
+            " la biodiversité ou une question de ton cours."
         ),
         "system": """
-You are Adam's patient, rigorous Grade 12 Biology 40S tutor at Collège Louis-Riel in Manitoba (DSFM standards).
-Teach primarily in English or French depending on Adam's prompt. Use a Socratic approach: ask one manageable question at a time, give hints before full solutions, and correct misconceptions kindly.
-IMPORTANT FOR LINKS: Whenever you suggest a video or search, you MUST provide a real clickable Markdown link in this exact format:
+Tu es le tuteur patient et rigoureux d'Adam pour le cours de Biologie 40S (12e année) au Collège Louis-Riel au Manitoba (normes DSFM).
+Enseigne en FRANÇAIS par défaut. Utilise une approche socratique : pose une seule question gérable à la fois, donne des indices avant les solutions complètes, et corrige les idées fausses avec bienveillance.
+IMPORTANT POUR LES LIENS : À la fin de ta réponse, tu dois TOUJOURS proposer de vrais liens cliquables Markdown vers YouTube sous ce format exact :
 [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=QUERY_EN_URL)
-Replace QUERY_EN_URL with keywords related to the topic (using '+' for spaces).
-When retrieved course-document excerpts are supplied, prioritize them and identify the source filename.
+Remplace QUERY_EN_URL par des mots-clés pertinents (en séparant les mots par des '+').
+Lorsque des extraits de documents de cours sont fournis, priorise-les et cite le nom du fichier source.
 """,
     },
     "English — Comprehensive Focus 40S": {
         "folder": "english",
         "welcome": (
-            "Hi Adam! Welcome to English Comprehensive Focus 40S. We can work"
-            " on reading, literary analysis, persuasive writing, grammar, or"
-            " revision."
+            "Salut Adam ! Bienvenue en Anglais Comprehensive Focus 40S. Nous"
+            " pouvons travailler sur la lecture, l'analyse littéraire, l'écriture"
+            " persuasive ou la grammaire."
         ),
         "system": """
-You are Adam's supportive Grade 12 English Language Arts tutor for Comprehensive Focus 40S in Manitoba.
-Support reading comprehension, thesis statements, evidence and quotation integration, paragraph structure, and revision.
-Provide real clickable Markdown links when suggesting resources or searches, formatted as [🔗 Lien explicatif](URL).
+Tu es le tuteur d'Adam pour le cours d'anglais Comprehensive Focus 40S au Manitoba. Bien que le cours soit en anglais, explique les stratégies et réponds principalement en français pour aider Adam à progresser, puis donne des exemples en anglais.
+Fournis de vrais liens Markdown cliquables lorsque tu suggères des recherches, formatés ainsi : [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...).
 """,
     },
     "Cinema — Witness to Modern History 40S": {
         "folder": "cinema",
         "welcome": (
-            "Hi Adam! Welcome to Cinema, Witness to Modern History 40S. Tell me"
-            " which film, historical period, or assignment you are studying."
+            "Salut Adam ! Bienvenue en Cinéma (Témoin de l'histoire moderne 40S)."
+            " Dis-moi quel film, période historique ou travail tu étudies."
         ),
         "system": """
-You are Adam's Grade 12 tutor for the Manitoba course “Le cinéma, témoin de l'histoire moderne 40S”.
-Help him analyze cinema as an art form, historical artifact, and interpreter of history.
-Provide real clickable Markdown links for video or historical searches, formatted as [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...).
+Tu es le tuteur d'Adam pour le cours manitobain « Le cinéma, témoin de l'histoire moderne 40S ».
+Enseigne en FRANÇAIS. Aide-le à analyser le cinéma comme art et artefact historique (contexte, point de vue, techniques).
+Fournis de vrais liens Markdown cliquables pour les recherches vidéo, formatés ainsi : [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...).
 """,
     },
 }
@@ -440,19 +439,19 @@ st.markdown("💡 **Suggestions rapides :**")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     if st.button("📖 Expliquer plus simplement"):
-        st.session_state.next_question = "Peux-tu m'expliquer cela plus simplement avec une analogie claire ?"
+        st.session_state.next_question = "Peux-tu m'expliquer cela plus simplement en français avec une analogie claire ?"
         st.rerun()
 with col2:
     if st.button("📝 Donner un exemple"):
-        st.session_state.next_question = "Peux-tu me donner un exemple concret issu du cours ?"
+        st.session_state.next_question = "Peux-tu me donner un exemple concret issu du cours en français ?"
         st.rerun()
 with col3:
     if st.button("🎥 Rechercher une vidéo"):
-        st.session_state.next_question = "Peux-tu me donner des liens de recherche YouTube pour illustrer ce concept ?"
+        st.session_state.next_question = "Peux-tu me donner des liens de recherche YouTube cliquables pour illustrer ce concept ?"
         st.rerun()
 with col4:
     if st.button("🖼️ Décrire un schéma"):
-        st.session_state.next_question = "Peux-tu me décrire un schéma visuel étape par étape ?"
+        st.session_state.next_question = "Peux-tu me décrire un schéma visuel étape par étape en français ?"
         st.rerun()
 
 typed_question = st.chat_input("Pose une question en français ou en anglais…")
@@ -495,7 +494,7 @@ if question and question.strip():
     messages_for_api = [{
         "role": "system",
         "content": course["system"] + "\n\n" + context_block + "\n\n"
-        "RAPPEL : À la fin de ta réponse, propose toujours des liens cliquables Markdown pertinents vers YouTube (ex: [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...)) pour aider Adam à visualiser les concepts.",
+        "RAPPEL ABSOLU : Réponds EXCLUSIVEMENT en FRANÇAIS. À la fin de ta réponse, propose TOUJOURS de vrais liens cliquables Markdown vers YouTube (ex: [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...)) pour aider Adam à visualiser les concepts.",
     }] + history[-12:]
 
     with st.chat_message("assistant"):

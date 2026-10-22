@@ -29,9 +29,9 @@ COURSES = {
         "system": """
 You are Adam's patient, rigorous Grade 12 Biology 40S tutor at Collège Louis-Riel in Manitoba (DSFM standards).
 Teach primarily in English or French depending on Adam's prompt. Use a Socratic approach: ask one manageable question at a time, give hints before full solutions, and correct misconceptions kindly.
-At the end of your response, always propose 2 helpful Copilot-style follow-up options:
-1. A suggested YouTube search query or video topic for visual learning.
-2. A suggestion to explore a diagram or schema.
+IMPORTANT FOR LINKS: Whenever you suggest a video or search, you MUST provide a real clickable Markdown link in this exact format:
+[🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=QUERY_EN_URL)
+Replace QUERY_EN_URL with keywords related to the topic (using '+' for spaces).
 When retrieved course-document excerpts are supplied, prioritize them and identify the source filename.
 """,
     },
@@ -45,7 +45,7 @@ When retrieved course-document excerpts are supplied, prioritize them and identi
         "system": """
 You are Adam's supportive Grade 12 English Language Arts tutor for Comprehensive Focus 40S in Manitoba.
 Support reading comprehension, thesis statements, evidence and quotation integration, paragraph structure, and revision.
-At the end of your response, propose Copilot-style follow-up options (e.g., writing templates, strategy videos, or stylistic examples).
+Provide real clickable Markdown links when suggesting resources or searches, formatted as [🔗 Lien explicatif](URL).
 """,
     },
     "Cinema — Witness to Modern History 40S": {
@@ -57,7 +57,7 @@ At the end of your response, propose Copilot-style follow-up options (e.g., writ
         "system": """
 You are Adam's Grade 12 tutor for the Manitoba course “Le cinéma, témoin de l'histoire moderne 40S”.
 Help him analyze cinema as an art form, historical artifact, and interpreter of history.
-At the end of your response, propose Copilot-style follow-up options (e.g., historical documentary links on YouTube, scene analysis breakdown).
+Provide real clickable Markdown links for video or historical searches, formatted as [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...).
 """,
     },
 }
@@ -69,7 +69,7 @@ st.title("🎓 Adam's Study Tutor")
 st.caption("Collège Louis-Riel · Grade 12 · 40S (DSFM)")
 st.info(
     "Utilise ce tuteur pour comprendre tes cours, t'entraîner avec des quiz et"
-    " préparer tes examens. Suis toujours les consignes de tes enseignants."
+    " préparer tes examens."
 )
 
 api_key = st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None
@@ -103,7 +103,17 @@ def speak_text(text: str):
     components.html(js_code, height=0)
 
 
-# Gestion des états du Quiz (10 questions)
+# Fonction pour couper la parole immédiatement
+def stop_speech():
+    js_code = """
+    <script>
+        window.speechSynthesis.cancel();
+    </script>
+    """
+    components.html(js_code, height=0)
+
+
+# Gestion des états du Quiz et des prompts
 if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = None
 if "show_hint" not in st.session_state:
@@ -112,6 +122,8 @@ if "quiz_submitted" not in st.session_state:
     st.session_state.quiz_submitted = False
 if "quiz_answers" not in st.session_state:
     st.session_state.quiz_answers = {}
+if "next_question" not in st.session_state:
+    st.session_state.next_question = None
 
 
 def generate_qcm(course_title, system_prompt, chunks_text, number_questions=10):
@@ -202,6 +214,9 @@ with st.sidebar:
     st.divider()
     st.header("🔊 Audio Output")
     enable_voice_output = st.checkbox("Lecture vocale automatique", value=True)
+    if st.button("🛑 Arrêter la parole"):
+        stop_speech()
+        st.success("Voix arrêtée.")
     st.divider()
 
     st.header("🎤 Voice input")
@@ -388,7 +403,7 @@ if st.session_state.quiz_data:
             st.balloons()
             st.success("🎉 Excellent travail ! Tu maîtrises parfaitement ton sujet.")
         elif score >= 5:
-            st.info("👍 Bon effort ! Encore quelques révisions et ce sarà parfait.")
+            st.info("👍 Bon effort ! Encore quelques révisions et ce sera parfait.")
         else:
             st.warning("💡 Prends le temps de revoir les notions avec le tuteur socratique pour progresser !")
 
@@ -420,9 +435,29 @@ if st.session_state.pending_audio_text:
         st.session_state.next_question = corrected_text.strip()
         st.rerun()
 
-typed_question = st.chat_input("Pose une question en français ou en anglais… (demande des vidéos ou schémas !)")
+# --- BOUTONS DE SUGGESTIONS RAPIDES (STYLE COPILOT) ---
+st.markdown("💡 **Suggestions rapides :**")
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    if st.button("📖 Expliquer plus simplement"):
+        st.session_state.next_question = "Peux-tu m'expliquer cela plus simplement avec une analogie claire ?"
+        st.rerun()
+with col2:
+    if st.button("📝 Donner un exemple"):
+        st.session_state.next_question = "Peux-tu me donner un exemple concret issu du cours ?"
+        st.rerun()
+with col3:
+    if st.button("🎥 Rechercher une vidéo"):
+        st.session_state.next_question = "Peux-tu me donner des liens de recherche YouTube pour illustrer ce concept ?"
+        st.rerun()
+with col4:
+    if st.button("🖼️ Décrire un schéma"):
+        st.session_state.next_question = "Peux-tu me décrire un schéma visuel étape par étape ?"
+        st.rerun()
+
+typed_question = st.chat_input("Pose une question en français ou en anglais…")
 question = typed_question
-if not question and st.session_state.get("not_question_key") and st.session_state.get("next_question"):
+if not question and st.session_state.get("next_question"):
     question = st.session_state.pop("next_question")
 
 if question and question.strip():
@@ -460,7 +495,7 @@ if question and question.strip():
     messages_for_api = [{
         "role": "system",
         "content": course["system"] + "\n\n" + context_block + "\n\n"
-        "RAPPEL : À la fin de ta réponse, propose toujours à Adam deux suggestions interactives (style Copilot) : 1) Une suggestion de recherche de vidéo YouTube (ex: '🎥 Rechercher une vidéo YouTube sur...'), 2) Une suggestion pour voir un schéma/schéma visuel (ex: '🖼️ Voir un schéma explicatif de...').",
+        "RAPPEL : À la fin de ta réponse, propose toujours des liens cliquables Markdown pertinents vers YouTube (ex: [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...)) pour aider Adam à visualiser les concepts.",
     }] + history[-12:]
 
     with st.chat_message("assistant"):

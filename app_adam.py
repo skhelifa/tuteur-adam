@@ -170,17 +170,17 @@ Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
         return None
 
 
+# --- BARRE LATÉRALE COMPACTE ET MODERNE (SANS DÉFILEMENT INUTILE) ---
 with st.sidebar:
-    st.markdown("### 📚 Matière active")
+    st.markdown("### 📚 Matière")
     course_name = st.radio(
-        "Choisir une matière",
+        "Matière active",
         list(COURSES.keys()),
         label_visibility="collapsed"
     )
-    st.divider()
-
-    st.markdown("### 🎯 Mode Examen (10 Q)")
-    st.caption("Test blanc basé sur les programmes du Manitoba.")
+    
+    st.markdown("---")
+    st.markdown("### 🎯 Examen (10 Q)")
     if st.button("🎲 Générer le quiz", use_container_width=True):
         st.session_state.show_hint = False
         st.session_state.quiz_submitted = False
@@ -198,7 +198,7 @@ with st.sidebar:
                 except Exception:
                     continue
         chunks_text = "\n\n".join(all_chunks_temp[:3])
-        with st.spinner("Préparation de l'examen d'entraînement d'Adam..."):
+        with st.spinner("Préparation..."):
             quiz = generate_qcm(
                 course_name,
                 COURSES[course_name]["system"],
@@ -209,18 +209,16 @@ with st.sidebar:
             st.session_state.quiz_data = quiz
             st.session_state.quiz_submitted = False
         else:
-            st.error("Impossible de générer le quiz. Réessaie !")
+            st.error("Erreur de génération.")
 
-    st.divider()
-    st.markdown("### 🔊 Audio")
-    enable_voice_output = st.checkbox("Lecture vocale automatique", value=True)
+    st.markdown("---")
+    st.markdown("### 🔊 Audio & 🎤 Vocal")
+    enable_voice_output = st.checkbox("Lecture vocale", value=True)
     if st.button("🛑 Arrêter la parole", use_container_width=True):
         stop_speech()
-        st.success("Voix arrêtée.")
-    st.divider()
-
-    st.markdown("### 🎤 Vocal")
-    audio_value = st.audio_input("Enregistrer")
+        st.success("Voix coupée.")
+    
+    audio_value = st.audio_input("Enregistrer votre question")
 
 course = COURSES[course_name]
 folder = DOCS_DIR / course["folder"]
@@ -314,7 +312,7 @@ if audio_value is not None:
     audio_bytes = audio_value.getvalue()
     audio_hash = hashlib.sha256(audio_bytes).hexdigest()
     if audio_hash != st.session_state.processed_audio_hash:
-        with st.spinner("Transcription de votre enregistrement…"):
+        with st.spinner("Transcription…"):
             try:
                 transcript = client.audio.transcriptions.create(
                     model="whisper-1",
@@ -327,7 +325,7 @@ if audio_value is not None:
                 st.session_state.pending_audio_text = transcript.text.strip()
                 st.session_state.processed_audio_hash = audio_hash
             except Exception as exc:
-                st.error(f"Échec de la transcription vocale : {exc}")
+                st.error(f"Erreur transcription : {exc}")
                 st.session_state.processed_audio_hash = audio_hash
 
 

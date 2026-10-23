@@ -247,37 +247,3 @@ def retrieve_chunks(question: str, chunks: list, limit: int = 4):
 if "histories_by_course" not in st.session_state:
     st.session_state.histories_by_course = {}
 if course_name not in st.session_state.histories_by_course:
-    st.session_state.histories_by_course[course_name] = [{
-        "role": "assistant",
-        "content": course["welcome"],
-    }]
-
-history = st.session_state.histories_by_course[course_name]
-
-if "processed_audio_hash" not in st.session_state:
-    st.session_state.processed_audio_hash = None
-if "pending_audio_text" not in st.session_state:
-    st.session_state.pending_audio_text = None
-
-if audio_value is not None:
-    audio_bytes = audio_value.getvalue()
-    audio_hash = hashlib.sha256(audio_bytes).hexdigest()
-    if audio_hash != st.session_state.processed_audio_hash:
-        with st.spinner("Transcription…"):
-            try:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=(
-                        getattr(audio_value, "name", "recording.wav"),
-                        audio_bytes,
-                        getattr(audio_value, "type", None) or "audio/wav",
-                    ),
-                )
-                st.session_state.pending_audio_text = transcript.text.strip()
-                st.session_state.processed_audio_hash = audio_hash
-            except Exception as exc:
-                st.error(f"Erreur transcription : {exc}")
-                st.session_state.processed_audio_hash = audio_hash
-
-
-# --- AFFICHAGE DE L'

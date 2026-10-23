@@ -506,7 +506,3 @@ st.caption(
     "Made with care by Dad ❤️ · Keep asking questions, practise, and build"
     " your own understanding."
 )
-st.caption(
-    "إلى ابني الحبيب، ضوء عيني ونبض قلبي ادم .. وجودك في حياتي هو أجمل عطايا"
-    " الرحمن، أدامك الله لي سنداً وفخراً."
-)

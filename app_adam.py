@@ -275,3 +275,9 @@ if audio_value is not None:
                 )
                 st.session_state.pending_audio_text = transcript.text.strip()
                 st.session_state.processed_audio_hash = audio_hash
+            except Exception as exc:
+                st.error(f"Erreur transcription : {exc}")
+                st.session_state.processed_audio_hash = audio_hash
+
+
+# --- AFFICHAGE DE L'

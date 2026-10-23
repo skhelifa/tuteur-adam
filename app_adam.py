@@ -156,7 +156,6 @@ Renvoie UNIQUEMENT un objet JSON valide dans cette structure exacte :
         )
         content = response.choices[0].message.content.strip()
         
-        # Extraction robuste du JSON via Regex pour ignorer le texte parasite ou les balises markdown
         match = re.search(r"\{.*\}", content, re.DOTALL)
         if match:
             json_str = match.group(0)
@@ -384,11 +383,22 @@ for idx, msg in enumerate(history):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         
-        # Déclenchement automatique de la synthèse vocale pour le dernier message de l'assistant
         if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
             speak_text(msg["content"])
     
-    # À la fin de chaque réponse de l'assistant, on affiche les suggestions rapides ET le bouton de génération de quiz contextuel
     if msg["role"] == "assistant" and idx == len(history) - 1:
         st.markdown("💡 **Suggestions rapides :**")
-        col1, col2, col3, col4 = st.
+        col1, col2, col3, col4 = st.columns(4)
+        btn_query = None
+        with col1:
+            if st.button("📖 Expliquer plus simplement", key=f"s1_{idx}", use_container_width=True):
+                btn_query = "Peux-tu m'expliquer cela plus simplement en français avec une analogie claire ?"
+        with col2:
+            if st.button("📝 Donner un exemple", key=f"s2_{idx}", use_container_width=True):
+                btn_query = "Peux-tu me donner un exemple concret issu du cours en français ?"
+        with col3:
+            if st.button("🎥 Rechercher une vidéo", key=f"s3_{idx}", use_container_width=True):
+                btn_query = "Peux-tu me donner des liens de recherche YouTube cliquables pour illustrer ce concept ?"
+        with col4:
+            if st.button("🖼️ Décrire un schéma", key=f"s4_{idx}", use_container_width=True):
+                btn_query = "Peux-tu me décrire un schéma vis

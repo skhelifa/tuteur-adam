@@ -172,4 +172,80 @@ with st.sidebar:
     course_name = st.radio(
         "Matière active",
         list(COURSES.keys()),
-        label_
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("---")
+    st.markdown("### 🔊 Audio & 🎤 Vocal")
+    enable_voice_output = st.checkbox("Lecture vocale auto", value=True)
+    if st.button("🛑 Arrêter la parole", use_container_width=True):
+        stop_speech()
+        st.success("Voix coupée.")
+    
+    audio_value = st.audio_input("Enregistrer votre question")
+
+course = COURSES[course_name]
+folder = DOCS_DIR / course["folder"]
+
+
+@st.cache_data(show_spinner=False)
+def load_pdf_chunks(folder_string: str):
+    folder_path = Path(folder_string)
+    chunks = []
+    if not folder_path.exists():
+        return chunks
+    for pdf_path in sorted(folder_path.glob("*.pdf")):
+        try:
+            reader = PdfReader(str(pdf_path))
+            full_text = "\n".join((page.extract_text() or "") for page in reader.pages)
+            full_text = re.sub(r"[ \t]+", " ", full_text)
+            full_text = re.sub(r"\n{3,}", "\n\n", full_text).strip()
+            if not full_text:
+                continue
+            paragraphs = [p.strip() for p in re.split(r"\n\s*\n", full_text) if p.strip()]
+            current = ""
+            for para in paragraphs:
+                if len(current) + len(para) > 1400 and current:
+                    chunks.append({"source": pdf_path.name, "text": current})
+                    current = ""
+                if len(para) > 1800:
+                    for start in range(0, len(para), 1400):
+                        piece = para[start : start + 1400]
+                        if piece.strip():
+                            chunks.append({"source": pdf_path.name, "text": piece})
+                else:
+                    current = (current + "\n\n" + para).strip()
+            if current:
+                chunks.append({"source": pdf_path.name, "text": current})
+        except Exception:
+            continue
+    return chunks
+
+
+def retrieve_chunks(question: str, chunks: list, limit: int = 4):
+    if not chunks or not question.strip():
+        return []
+    stop_words = {
+        "the", "and", "for", "with", "that", "this", "from", "what", "when",
+        "where", "which", "how", "why", "are", "was", "were", "have", "has",
+        "does", "did", "can", "could", "would", "should", "into", "about",
+        "les", "des", "une", "dans", "pour", "avec", "est", "que", "qui",
+        "quoi", "comment", "pourquoi", "sur", "par", "aux", "du", "de", "la",
+        "le", "un", "et", "en", "je", "tu", "il", "elle"
+    }
+    terms = [t.lower() for t in re.findall(r"[A-Za-zÀ-ÿ0-9'-]{3,}", question)]
+    terms = [t for t in terms if t not in stop_words]
+    if not terms:
+        return []
+    scored = []
+    for chunk in chunks:
+        text = chunk["text"].lower()
+        words = re.findall(r"[A-Za-zÀ-ÿ0-9'-]{3,}", text)
+        counts = Counter(words)
+        score = 0.0
+        for term in set(terms):
+            if term in counts:
+                score += 1.0 + min(counts[term], 4) * 0.15
+            else:
+                if any(
+                    term in word or word

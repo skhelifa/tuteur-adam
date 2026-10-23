@@ -26,11 +26,14 @@ COURSES = {
             " aujourd'hui ? Nous pouvons revoir la génétique, l'hérédité, l'évolution,"
             " la biodiversité ou une question de ton cours."
         ),
-        "system": """
-Tu es le tuteur patient et rigoureux d'Adam pour le cours de Biologie 40S (12e année) au Collège Louis-Riel au Manitoba (normes DSFM).
-APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes et massives. Pose UNE seule question claire et gérable à la fois, guide Adam par des indices, vérifie sa compréhension et corrige les idées fausses avec bienveillance.
-À la fin de ta réponse, propose toujours des pistes de réflexion ou de discussion.
-""",
+        "system": (
+            "Tu es le tuteur patient et rigoureux d'Adam pour le cours de Biologie 40S (12e année) "
+            "au Collège Louis-Riel au Manitoba (normes DSFM).\n"
+            "APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes "
+            "et massives. Pose UNE seule question claire et gérable à la fois, guide Adam par des indices, "
+            "vérifie sa compréhension et corrige les idées fausses avec bienveillance.\n"
+            "À la fin de ta réponse, propose toujours des pistes de réflexion ou de discussion."
+        ),
     },
     "English — Comprehensive Focus 40S": {
         "folder": "english",
@@ -39,10 +42,11 @@ APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de rép
             " pouvons travailler sur la lecture, l'analyse littéraire, l'écriture"
             " persuasive ou la grammaire."
         ),
-        "system": """
-Tu es le tuteur d'Adam pour le cours d'anglais Comprehensive Focus 40S au Manitoba. 
-APPROCHE SOCRATIQUE OBLIGATOIRE : Explique les stratégies en français, pose des questions étape par étape, aide Adam à structurer sa pensée sans rédiger son travail à sa place.
-""",
+        "system": (
+            "Tu es le tuteur d'Adam pour le cours d'anglais Comprehensive Focus 40S au Manitoba.\n"
+            "APPROCHE SOCRATIQUE OBLIGATOIRE : Explique les stratégies en français, pose des questions "
+            "étape par étape, aide Adam à structurer sa pensée sans rédiger son travail à sa place."
+        ),
     },
     "Cinema — Witness to Modern History 40S": {
         "folder": "cinema",
@@ -50,10 +54,11 @@ APPROCHE SOCRATIQUE OBLIGATOIRE : Explique les stratégies en français, pose de
             "Salut Adam ! Bienvenue en Cinéma (Témoin de l'histoire moderne 40S)."
             " Dis-moi quel film, période historique ou travail tu étudies."
         ),
-        "system": """
-Tu es le tuteur d'Adam pour le cours manitobain « Le cinéma, témoin de l'histoire moderne 40S ».
-APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Guide-le par des questions socratiques sur le contexte historique, les choix de réalisation et l'esprit critique, une question à la fois.
-""",
+        "system": (
+            "Tu es le tuteur d'Adam pour le cours manitobain « Le cinéma, témoin de l'histoire moderne 40S ».\n"
+            "APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Guide-le par des questions socratiques "
+            "sur le contexte historique, les choix de réalisation et l'esprit critique, une question à la fois."
+        ),
     },
 }
 
@@ -118,18 +123,19 @@ if "next_question" not in st.session_state:
 
 
 def generate_qcm_from_context(course_title, system_prompt, discussion_context, number_questions=10):
-    prompt = f"""En te basant sur la discussion récente et le cours : {course_title}, crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM) en français.
-Contexte de la discussion récente :
-{discussion_context}
-
-Format de l'examen :
-- Exactement {number_questions} questions.
-- Quatre options par question (A, B, C, D).
-- Une seule bonne réponse par question.
-- Rédige tout en français avec une explication et un indice (hint) pour chaque question.
-
-Tu DOIS renvoyer un objet JSON valide contenant exactement une clé "questions" qui est un tableau de {number_questions} objets avec ces clés : "question", "options" (un dictionnaire avec les clés A, B, C, D), "correct" (la lettre majuscule), "hint", "explanation".
-"""
+    prompt = (
+        f"En te basant sur la discussion récente et le cours : {course_title}, "
+        f"crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM) en français.\n"
+        f"Contexte de la discussion récente :\n{discussion_context}\n\n"
+        "Format de l'examen :\n"
+        f"- Exactement {number_questions} questions.\n"
+        "- Quatre options par question (A, B, C, D).\n"
+        "- Une seule bonne réponse par question.\n"
+        "- Rédige tout en français avec une explication et un indice (hint) pour chaque question.\n\n"
+        f"Tu DOIS renvoyer un objet JSON valide contenant exactement une clé \"questions\" "
+        f"qui est un tableau de {number_questions} objets avec ces clés : \"question\", "
+        "\"options\" (un dictionnaire avec les clés A, B, C, D), \"correct\" (la lettre majuscule), \"hint\", \"explanation\"."
+    )
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -269,173 +275,3 @@ if audio_value is not None:
                 )
                 st.session_state.pending_audio_text = transcript.text.strip()
                 st.session_state.processed_audio_hash = audio_hash
-            except Exception as exc:
-                st.error(f"Erreur transcription : {exc}")
-                st.session_state.processed_audio_hash = audio_hash
-
-
-# --- AFFICHAGE DE L'EXAMEN ACTIF ---
-if st.session_state.quiz_data:
-    questions = st.session_state.quiz_data.get("questions", [])
-    total = len(questions)
-    st.divider()
-    st.subheader(f"🎯 Quiz d'entraînement (sur la discussion) — {course_name}")
-    st.write(f"**{total} questions** · Basé sur vos échanges récents")
-
-    if not st.session_state.quiz_submitted:
-        with st.form("qcm_exam_form"):
-            user_answers = {}
-            for i, item in enumerate(questions):
-                st.markdown(f"### Question {i + 1} sur {total}")
-                st.write(item["question"])
-                option_labels = [
-                    f"{letter}. {item['options'][letter]}"
-                    for letter in ("A", "B", "C", "D")
-                ]
-                choice = st.radio(
-                    "Choisis une réponse :",
-                    option_labels,
-                    index=None,
-                    key=f"quiz_answer_{i}",
-                )
-                user_answers[i] = choice
-                with st.expander("💡 Besoin d'un indice ?"):
-                    st.write(item.get("hint", "Aucun indice disponible."))
-                st.divider()
-
-            submitted = st.form_submit_button(
-                "✅ Soumettre l'examen et voir mon score",
-                type="primary",
-            )
-
-        if submitted:
-            st.session_state.quiz_answers = user_answers
-            st.session_state.quiz_submitted = True
-            st.rerun()
-
-    else:
-        score = 0
-        user_answers = st.session_state.quiz_answers
-        st.markdown("### 📊 Résultats détaillés de ton examen :")
-        for i, item in enumerate(questions):
-            ans = user_answers.get(i)
-            correct_letter = item["correct"].upper()
-            st.markdown(f"**Question {i + 1} : {item['question']}**")
-
-            if ans:
-                selected_letter = ans[0].upper()
-                if selected_letter == correct_letter:
-                    score += 1
-                    st.success(
-                        f"✅ Correct ! Ta réponse : {ans}\n\n*{item['explanation']}*"
-                    )
-                else:
-                    st.error(
-                        f"❌ Incorrect. Ta réponse : {ans} | Bonne réponse : **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*"
-                    )
-            else:
-                st.warning(
-                    f"⚠️ Sans réponse. La bonne réponse était **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*"
-                )
-            st.markdown("---")
-
-        percentage = (score / total) * 100 if total > 0 else 0
-        st.markdown(f"## 🏆 Ton Score Final : {score} / {total} ({percentage:.0f}%)")
-
-        if score >= 8:
-            st.balloons()
-            st.success("🎉 Excellent travail ! Tu maîtrises parfaitement ton sujet.")
-        elif score >= 5:
-            st.info("👍 Bon effort ! Encore quelques révisions et ce sera parfait.")
-        else:
-            st.warning("💡 Prends le temps de revoir les notions avec le tuteur socratique pour progresser !")
-
-        if st.button("🔄 Recommencer un nouveau quiz"):
-            st.session_state.quiz_data = None
-            st.session_state.quiz_submitted = False
-            st.session_state.quiz_answers = {}
-            st.rerun()
-
-    st.divider()
-
-
-# --- AFFICHAGE DE L'HISTORIQUE ET DES SUGGESTIONS + BOUTON QUIZ À CHAQUE FIN DE RÉPONSE ---
-for idx, msg in enumerate(history):
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        
-        if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
-            speak_text(msg["content"])
-    
-    if msg["role"] == "assistant" and idx == len(history) - 1:
-        st.markdown("💡 **Suggestions rapides :**")
-        col1, col2, col3, col4 = st.columns(4)
-        btn_query = None
-        with col1:
-            if st.button("📖 Expliquer plus simplement", key=f"s1_{idx}", use_container_width=True):
-                btn_query = "Peux-tu m'expliquer cela plus simplement en français avec une analogie claire ?"
-        with col2:
-            if st.button("📝 Donner un exemple", key=f"s2_{idx}", use_container_width=True):
-                btn_query = "Peux-tu me donner un exemple concret issu du cours en français ?"
-        with col3:
-            if st.button("🎥 Rechercher une vidéo", key=f"s3_{idx}", use_container_width=True):
-                btn_query = "Peux-tu me donner des liens de recherche YouTube cliquables pour illustrer ce concept ?"
-        with col4:
-            if st.button("🖼️ Décrire un schéma", key=f"s4_{idx}", use_container_width=True):
-                btn_query = "Peux-tu me décrire un schéma visuel étape par étape en français ?"
-
-        if btn_query:
-            st.session_state.next_question = btn_query
-            st.rerun()
-
-        st.markdown("")
-        if st.button("🎯 🎲 Générer un quiz de 10 questions sur cette discussion", key=f"quiz_btn_{idx}", use_container_width=True):
-            with st.spinner("Génération du quiz personnalisé basé sur vos échanges..."):
-                recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
-                quiz = generate_qcm_from_context(
-                    course_name,
-                    COURSES[course_name]["system"],
-                    recent_discussion,
-                    number_questions=10,
-                )
-            if quiz and "questions" in quiz:
-                st.session_state.quiz_data = quiz
-                st.session_state.quiz_submitted = False
-                st.rerun()
-            else:
-                st.error("Impossible de générer le quiz. Réessaie !")
-
-if st.session_state.pending_audio_text:
-    st.info("Transcription vocale — vérifie-la, puis clique sur Envoyer.")
-    with st.form("voice_transcript_form", clear_on_submit=True):
-        corrected_text = st.text_area(
-            "Votre question transcrite",
-            value=st.session_state.pending_audio_text,
-            height=100,
-        )
-        submitted_voice = st.form_submit_button("Envoyer la question")
-    if submitted_voice and corrected_text.strip():
-        st.session_state.pending_audio_text = None
-        st.session_state.next_question = corrected_text.strip()
-        st.rerun()
-
-typed_question = st.chat_input("Pose une question en français ou en anglais…")
-question = typed_question
-if not question and st.session_state.get("next_question"):
-    question = st.session_state.pop("next_question")
-
-if question and question.strip():
-    question = question.strip()
-    history.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.markdown(question)
-
-    all_chunks = load_pdf_chunks(str(folder))
-    relevant = retrieve_chunks(question, all_chunks)
-    if relevant:
-        excerpts = "\n\n".join(
-            f"[Source file: {item['source']}]\n{item['text']}" for item in relevant
-        )
-        context_block = (
-            "The following are excerpts retrieved from local course PDFs (DSFM / Manitoba curriculum). Use them"
-            " when relevant

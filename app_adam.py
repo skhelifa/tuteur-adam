@@ -28,7 +28,7 @@ COURSES = {
         ),
         "system": """
 Tu es le tuteur patient et rigoureux d'Adam pour le cours de Biologie 40S (12e année) au Collège Louis-Riel au Manitoba (normes DSFM).
-APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes et massives. Pose UNE seule question claire et gérable à la fois, guide Adam par des indices, vérifie sa compréhension et corrige ses idées fausses avec bienveillance.
+APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes et massives. Pose UNE seule question claire et gérable à la fois, guide Adam par des indices, vérifie sa compréhension et corrige les idées fausses avec bienveillance.
 À la fin de ta réponse, propose toujours des pistes de réflexion ou de discussion.
 """,
     },
@@ -128,7 +128,7 @@ Format de l'examen :
 - Une seule bonne réponse par question.
 - Rédige tout en français avec une explication et un indice (hint) pour chaque question.
 
-Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
+Renvoie UNIQUEMENT un objet JSON valide dans cette structure exacte :
 {{
   "questions": [
     {{
@@ -155,12 +155,15 @@ Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
             temperature=0.7,
         )
         content = response.choices[0].message.content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.endswith("```"):
-            content = content[:-3]
-        return json.loads(content.strip())
-    except Exception:
+        
+        # Extraction robuste du JSON via Regex pour ignorer le texte parasite ou les balises markdown
+        match = re.search(r"\{.*\}", content, re.DOTALL)
+        if match:
+            json_str = match.group(0)
+            return json.loads(json_str)
+        return None
+    except Exception as e:
+        print(f"Erreur de génération JSON : {e}")
         return None
 
 
@@ -388,127 +391,4 @@ for idx, msg in enumerate(history):
     # À la fin de chaque réponse de l'assistant, on affiche les suggestions rapides ET le bouton de génération de quiz contextuel
     if msg["role"] == "assistant" and idx == len(history) - 1:
         st.markdown("💡 **Suggestions rapides :**")
-        col1, col2, col3, col4 = st.columns(4)
-        btn_query = None
-        with col1:
-            if st.button("📖 Expliquer plus simplement", key=f"s1_{idx}", use_container_width=True):
-                btn_query = "Peux-tu m'expliquer cela plus simplement en français avec une analogie claire ?"
-        with col2:
-            if st.button("📝 Donner un exemple", key=f"s2_{idx}", use_container_width=True):
-                btn_query = "Peux-tu me donner un exemple concret issu du cours en français ?"
-        with col3:
-            if st.button("🎥 Rechercher une vidéo", key=f"s3_{idx}", use_container_width=True):
-                btn_query = "Peux-tu me donner des liens de recherche YouTube cliquables pour illustrer ce concept ?"
-        with col4:
-            if st.button("🖼️ Décrire un schéma", key=f"s4_{idx}", use_container_width=True):
-                btn_query = "Peux-tu me décrire un schéma visuel étape par étape en français ?"
-
-        if btn_query:
-            st.session_state.next_question = btn_query
-            st.rerun()
-
-        # Bouton direct pour générer un quiz sur la discussion en cours
-        st.markdown("")
-        if st.button("🎯 🎲 Générer un quiz de 10 questions sur cette discussion", key=f"quiz_btn_{idx}", use_container_width=True):
-            with st.spinner("Génération du quiz personnalisé basé sur vos échanges..."):
-                # Récupérer les derniers messages de la discussion comme contexte
-                recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
-                quiz = generate_qcm_from_context(
-                    course_name,
-                    COURSES[course_name]["system"],
-                    recent_discussion,
-                    number_questions=10,
-                )
-            if quiz:
-                st.session_state.quiz_data = quiz
-                st.session_state.quiz_submitted = False
-                st.rerun()
-            else:
-                st.error("Impossible de générer le quiz. Réessaie !")
-
-if st.session_state.pending_audio_text:
-    st.info("Transcription vocale — vérifie-la, puis clique sur Envoyer.")
-    with st.form("voice_transcript_form", clear_on_submit=True):
-        corrected_text = st.text_area(
-            "Votre question transcrite",
-            value=st.session_state.pending_audio_text,
-            height=100,
-        )
-        submitted_voice = st.form_submit_button("Envoyer la question")
-    if submitted_voice and corrected_text.strip():
-        st.session_state.pending_audio_text = None
-        st.session_state.next_question = corrected_text.strip()
-        st.rerun()
-
-typed_question = st.chat_input("Pose une question en français ou en anglais…")
-question = typed_question
-if not question and st.session_state.get("next_question"):
-    question = st.session_state.pop("next_question")
-
-if question and question.strip():
-    question = question.strip()
-    history.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.markdown(question)
-
-    all_chunks = load_pdf_chunks(str(folder))
-    relevant = retrieve_chunks(question, all_chunks)
-    if relevant:
-        excerpts = "\n\n".join(
-            f"[Source file: {item['source']}]\n{item['text']}" for item in relevant
-        )
-        context_block = (
-            "The following are excerpts retrieved from local course PDFs (DSFM / Manitoba curriculum). Use them"
-            " when relevant, cite the source filename in your response, and say"
-            " when they do not answer the question.\n\n"
-            + excerpts
-        )
-        st.caption(
-            "Références officielles utilisées : "
-            + ", ".join(sorted({item["source"] for item in relevant}))
-        )
-    else:
-        context_block = (
-            "No relevant passage was retrieved from the local course PDFs for this"
-            " question. Answer helpfully from general Manitoba curriculum knowledge."
-        )
-
-    api_history = [
-        msg for msg in history 
-        if not (msg["role"] == "assistant" and msg["content"] == course["welcome"])
-    ]
-
-    messages_for_api = [{
-        "role": "system",
-        "content": course["system"] + "\n\n" + context_block + "\n\n"
-        "RAPPEL ABSOLU DE LA MÉTHODE SOCRATIQUE : Réponds en FRANÇAIS. Ne donne jamais de solution complète d'un seul coup. Pose UNE SEULE question socratique claire pour faire réfléchir Adam, et propose des liens cliquables YouTube si pertinent.",
-    }] + api_history[-12:]
-
-    with st.chat_message("assistant"):
-        with st.spinner("Réflexion socratique…"):
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini", messages=messages_for_api, temperature=0.4
-                )
-                answer = (
-                    response.choices[0].message.content
-                    or "Je n'ai pas pu générer de réponse. Veuillez réessayer."
-                )
-                st.markdown(answer)
-                history.append({"role": "assistant", "content": answer})
-
-            except Exception as exc:
-                st.error(f"Une erreur s'est produite lors de la génération de la réponse : {exc}")
-
-    st.session_state.histories_by_course[course_name] = history
-    st.rerun()
-
-st.divider()
-st.caption(
-    "Made with care by Dad ❤️ · Keep asking questions, practise, and build"
-    " your own understanding."
-)
-st.caption(
-    "إلى ابني الحبيب، ضوء عيني ونبض قلبي ادم .. وجودك في حياتي هو أجمل عطايا"
-    " الرحمن، أدامك الله لي سنداً وفخراً."
-)
+        col1, col2, col3, col4 = st.

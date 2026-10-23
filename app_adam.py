@@ -28,11 +28,8 @@ COURSES = {
         ),
         "system": """
 Tu es le tuteur patient et rigoureux d'Adam pour le cours de Biologie 40S (12e année) au Collège Louis-Riel au Manitoba (normes DSFM).
-Enseigne en FRANÇAIS par défaut. Utilise une approche socratique : pose une seule question gérable à la fois, donne des indices avant les solutions complètes, et corrige les idées fausses avec bienveillance.
-IMPORTANT POUR LES LIENS : À la fin de ta réponse, tu dois TOUJOURS proposer de vrais liens cliquables Markdown vers YouTube sous ce format exact :
-[🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=QUERY_EN_URL)
-Remplace QUERY_EN_URL par des mots-clés pertinents (en séparant les mots par des '+').
-Lorsque des extraits de documents de cours sont fournis, priorise-les et cite le nom du fichier source.
+APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes et massives. Pose UNE seule question claire et gérable à la fois, guide Adam par des indices, vérifie sa compréhension et corrige ses idées fausses avec bienveillance.
+À la fin de ta réponse, propose toujours des pistes de réflexion ou de discussion.
 """,
     },
     "English — Comprehensive Focus 40S": {
@@ -43,8 +40,8 @@ Lorsque des extraits de documents de cours sont fournis, priorise-les et cite le
             " persuasive ou la grammaire."
         ),
         "system": """
-Tu es le tuteur d'Adam pour le cours d'anglais Comprehensive Focus 40S au Manitoba. Bien que le cours soit en anglais, explique les stratégies et réponds principalement en français pour aider Adam à progresser, puis donne des exemples en anglais.
-Fournis de vrais liens Markdown cliquables lorsque tu suggères des recherches, formatés ainsi : [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...).
+Tu es le tuteur d'Adam pour le cours d'anglais Comprehensive Focus 40S au Manitoba. 
+APPROCHE SOCRATIQUE OBLIGATOIRE : Explique les stratégies en français, pose des questions étape par étape, aide Adam à structurer sa pensée sans rédiger son travail à sa place.
 """,
     },
     "Cinema — Witness to Modern History 40S": {
@@ -55,8 +52,7 @@ Fournis de vrais liens Markdown cliquables lorsque tu suggères des recherches, 
         ),
         "system": """
 Tu es le tuteur d'Adam pour le cours manitobain « Le cinéma, témoin de l'histoire moderne 40S ».
-Enseigne en FRANÇAIS. Aide-le à analyser le cinéma comme art et artefact historique (contexte, point de vue, techniques).
-Fournis de vrais liens Markdown cliquables pour les recherches vidéo, formatés ainsi : [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...).
+APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Guide-le par des questions socratiques sur le contexte historique, les choix de réalisation et l'esprit critique, une question à la fois.
 """,
     },
 }
@@ -67,8 +63,7 @@ st.set_page_config(
 st.title("🎓 Adam's Study Tutor")
 st.caption("Collège Louis-Riel · Grade 12 · 40S (DSFM)")
 st.info(
-    "Utilise ce tuteur pour comprendre tes cours, t'entraîner avec des quiz et"
-    " préparer tes examens."
+    "Utilise ce tuteur pour comprendre tes cours, t'entraîner et progresser pas à pas."
 )
 
 api_key = st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None
@@ -122,17 +117,16 @@ if "next_question" not in st.session_state:
     st.session_state.next_question = None
 
 
-def generate_qcm(course_title, system_prompt, chunks_text, number_questions=10):
-    prompt = f"""Crée un examen d'entraînement d'exactement {number_questions} questions à choix multiples (QCM) pour un élève de 12e année basé sur les standards de la DSFM et du Manitoba pour le cours : {course_title}.
+def generate_qcm_from_context(course_title, system_prompt, discussion_context, number_questions=10):
+    prompt = f"""En te basant sur la discussion récente et le cours : {course_title}, crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM) en français.
+Contexte de la discussion récente :
+{discussion_context}
+
 Format de l'examen :
 - Exactement {number_questions} questions.
-- Quatre options par question, étiquetées A, B, C, D.
+- Quatre options par question (A, B, C, D).
 - Une seule bonne réponse par question.
-- Rédige toutes les questions, options, indices et explications en français.
-- Inclus une courte explication et un indice utile pour chaque question.
-
-Utilise ces extraits de cours / anciens examens si pertinent :
-{chunks_text}
+- Rédige tout en français avec une explication et un indice (hint) pour chaque question.
 
 Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
 {{
@@ -140,13 +134,13 @@ Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
     {{
       "question": "Texte de la question",
       "options": {{
-        "A": "Première option",
-        "B": "Deuxième option",
-        "C": "Troisième option",
-        "D": "Quatrième option"
+        "A": "Option A",
+        "B": "Option B",
+        "C": "Option C",
+        "D": "Option D"
       }},
       "correct": "A",
-      "hint": "Un indice utile",
+      "hint": "Indice utile",
       "explanation": "Explication détaillée"
     }}
   ]
@@ -170,7 +164,7 @@ Renvoie UNIQUEMENT un tableau JSON valide dans cette structure exacte :
         return None
 
 
-# --- BARRE LATÉRALE COMPACTE ET MODERNE (SANS DÉFILEMENT INUTILE) ---
+# --- BARRE LATÉRALE COMPACTE ET ÉPURÉE ---
 with st.sidebar:
     st.markdown("### 📚 Matière")
     course_name = st.radio(
@@ -180,40 +174,8 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    st.markdown("### 🎯 Examen (10 Q)")
-    if st.button("🎲 Générer le quiz", use_container_width=True):
-        st.session_state.show_hint = False
-        st.session_state.quiz_submitted = False
-        folder_path = DOCS_DIR / COURSES[course_name]["folder"]
-        all_chunks_temp = []
-        if folder_path.exists():
-            for pdf_path in sorted(folder_path.glob("*.pdf")):
-                try:
-                    reader = PdfReader(str(pdf_path))
-                    full_text = "\n".join(
-                        (page.extract_text() or "") for page in reader.pages
-                    )
-                    if full_text.strip():
-                        all_chunks_temp.append(f"\n{full_text[:6000]}")
-                except Exception:
-                    continue
-        chunks_text = "\n\n".join(all_chunks_temp[:3])
-        with st.spinner("Préparation..."):
-            quiz = generate_qcm(
-                course_name,
-                COURSES[course_name]["system"],
-                chunks_text,
-                number_questions=10,
-            )
-        if quiz:
-            st.session_state.quiz_data = quiz
-            st.session_state.quiz_submitted = False
-        else:
-            st.error("Erreur de génération.")
-
-    st.markdown("---")
     st.markdown("### 🔊 Audio & 🎤 Vocal")
-    enable_voice_output = st.checkbox("Lecture vocale", value=True)
+    enable_voice_output = st.checkbox("Lecture vocale auto", value=True)
     if st.button("🛑 Arrêter la parole", use_container_width=True):
         stop_speech()
         st.success("Voix coupée.")
@@ -329,12 +291,13 @@ if audio_value is not None:
                 st.session_state.processed_audio_hash = audio_hash
 
 
+# --- AFFICHAGE DE L'EXAMEN ACTIF ---
 if st.session_state.quiz_data:
     questions = st.session_state.quiz_data.get("questions", [])
     total = len(questions)
     st.divider()
-    st.subheader(f"🎯 Examen d'entraînement — {course_name}")
-    st.write(f"**{total} questions** · Une seule réponse correcte par question")
+    st.subheader(f"🎯 Quiz d'entraînement (sur la discussion) — {course_name}")
+    st.write(f"**{total} questions** · Basé sur vos échanges récents")
 
     if not st.session_state.quiz_submitted:
         with st.form("qcm_exam_form"):
@@ -413,10 +376,16 @@ if st.session_state.quiz_data:
     st.divider()
 
 
+# --- AFFICHAGE DE L'HISTORIQUE ET DES SUGGESTIONS + BOUTON QUIZ À CHAQUE FIN DE RÉPONSE ---
 for idx, msg in enumerate(history):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        
+        # Déclenchement automatique de la synthèse vocale pour le dernier message de l'assistant
+        if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
+            speak_text(msg["content"])
     
+    # À la fin de chaque réponse de l'assistant, on affiche les suggestions rapides ET le bouton de génération de quiz contextuel
     if msg["role"] == "assistant" and idx == len(history) - 1:
         st.markdown("💡 **Suggestions rapides :**")
         col1, col2, col3, col4 = st.columns(4)
@@ -437,6 +406,25 @@ for idx, msg in enumerate(history):
         if btn_query:
             st.session_state.next_question = btn_query
             st.rerun()
+
+        # Bouton direct pour générer un quiz sur la discussion en cours
+        st.markdown("")
+        if st.button("🎯 🎲 Générer un quiz de 10 questions sur cette discussion", key=f"quiz_btn_{idx}", use_container_width=True):
+            with st.spinner("Génération du quiz personnalisé basé sur vos échanges..."):
+                # Récupérer les derniers messages de la discussion comme contexte
+                recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
+                quiz = generate_qcm_from_context(
+                    course_name,
+                    COURSES[course_name]["system"],
+                    recent_discussion,
+                    number_questions=10,
+                )
+            if quiz:
+                st.session_state.quiz_data = quiz
+                st.session_state.quiz_submitted = False
+                st.rerun()
+            else:
+                st.error("Impossible de générer le quiz. Réessaie !")
 
 if st.session_state.pending_audio_text:
     st.info("Transcription vocale — vérifie-la, puis clique sur Envoyer.")
@@ -484,10 +472,6 @@ if question and question.strip():
             "No relevant passage was retrieved from the local course PDFs for this"
             " question. Answer helpfully from general Manitoba curriculum knowledge."
         )
-        if not all_chunks:
-            st.caption(
-                "💡 Astuce : Dépose des PDF d'anciens examens DSFM ou du Manitoba dans le dossier documents pour enrichir le tuteur !"
-            )
 
     api_history = [
         msg for msg in history 
@@ -497,11 +481,11 @@ if question and question.strip():
     messages_for_api = [{
         "role": "system",
         "content": course["system"] + "\n\n" + context_block + "\n\n"
-        "RAPPEL ABSOLU : Réponds EXCLUSIVEMENT en FRANÇAIS. À la fin de ta réponse, propose TOUJOURS de vrais liens cliquables Markdown vers YouTube (ex: [🎥 Rechercher sur YouTube](https://www.youtube.com/results?search_query=...)) pour aider Adam à visualiser les concepts.",
+        "RAPPEL ABSOLU DE LA MÉTHODE SOCRATIQUE : Réponds en FRANÇAIS. Ne donne jamais de solution complète d'un seul coup. Pose UNE SEULE question socratique claire pour faire réfléchir Adam, et propose des liens cliquables YouTube si pertinent.",
     }] + api_history[-12:]
 
     with st.chat_message("assistant"):
-        with st.spinner("Réflexion…"):
+        with st.spinner("Réflexion socratique…"):
             try:
                 response = client.chat.completions.create(
                     model="gpt-4o-mini", messages=messages_for_api, temperature=0.4
@@ -513,9 +497,6 @@ if question and question.strip():
                 st.markdown(answer)
                 history.append({"role": "assistant", "content": answer})
 
-                if enable_voice_output:
-                    speak_text(answer)
-
             except Exception as exc:
                 st.error(f"Une erreur s'est produite lors de la génération de la réponse : {exc}")
 
@@ -526,8 +507,4 @@ st.divider()
 st.caption(
     "Made with care by Dad ❤️ · Keep asking questions, practise, and build"
     " your own understanding."
-)
-st.caption(
-    "إلى ابني الحبيب، ضوء عيني ونبض قلبي ادم .. وجودك في حياتي هو أجمل عطايا"
-    " الرحمن، أدامك الله لي سنداً وفخراً."
 )

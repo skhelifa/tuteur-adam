@@ -116,19 +116,15 @@ client = OpenAI(api_key=api_key)
 
 # Fonctions d'illustration Souveraine (DALL-E Grounded)
 def generer_image_souveraine(contexte_texte: str, focus_visuel: str):
-    """
-    Génère une illustration pédagogique et scientifique stricte basée exclusivement sur les faits locaux
-    récupérés de la base de données souveraine (RAG), garantissant la véracité de l'image.
-    """
     try:
         distill_prompt = f"""Tu es un conseiller en design pédagogique et illustrateur scientifique pour la DSFM.
-Conçois un prompt descriptif ultra-précis pour une illustration ou un schéma éducatif de 12e année basé EXCLUSIVEMENT sur les données factuelles et locales fournies ci-dessous.
-Surtout : pas de texte complexe, de mots ou de légendes floues ou mal orthographiés (limite au strict minimum ou supprime le texte pour privilégier des symboles ou des repères visuels clairs).
+Conçois un prompt descriptif pour une illustration éducative de 12e année basée sur les données locales ci-dessous.
+Évite le texte complexe, les mots flous ou mal orthographiés (privilégie des symboles clairs et un schéma épuré).
 
-Sujet d'étude : {focus_visuel}
-Données contextuelles issues de notre base souveraine : {contexte_texte}
+Sujet : {focus_visuel}
+Données contextuelles locales : {contexte_texte}
 
-Décris une illustration scientifique détaillée, de type schéma de biologie, diagramme, dessin réaliste ou plan technique, sans fioritures esthétiques ou artistiques, purement pédagogique, sur un fond sobre."""
+Décris une illustration scientifique détaillée (schéma, diagramme ou dessin réaliste), pédagogique, sur fond sobre."""
         
         res = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -188,6 +184,10 @@ if "processed_audio_hash" not in st.session_state:
     st.session_state.processed_audio_hash = None
 if "pending_audio_text" not in st.session_state:
     st.session_state.pending_audio_text = None
+if "current_lesson_plan" not in st.session_state:
+    st.session_state.current_lesson_plan = ""
+if "current_eval_data" not in st.session_state:
+    st.session_state.current_eval_data = ""
 
 
 # Générateur de QCM au format JSON strict
@@ -343,11 +343,10 @@ with st.sidebar:
 # =============================================================================
 # ESPACE 1 : ÉLÈVE & TUTEUR SOCRATIQUE
 # =============================================================================
-if navigation_espace == "🎓 Espace Élève (Tuteur Socratique)":
+if "Élève" in navigation_espace:
     st.title(f"🎓 Tuteur Socratique — {course_name}")
     st.info(f"Posture active : **{mode_selectionne}**")
 
-    # Initialisation de l'historique du cours
     if course_name not in st.session_state.histories_by_course:
         st.session_state.histories_by_course[course_name] = [{
             "role": "assistant",
@@ -355,276 +354,4 @@ if navigation_espace == "🎓 Espace Élève (Tuteur Socratique)":
         }]
     history = st.session_state.histories_by_course[course_name]
 
-    # Transcription Whisper
     if audio_value is not None:
-        audio_bytes = audio_value.getvalue()
-        audio_hash = hashlib.sha256(audio_bytes).hexdigest()
-        if audio_hash != st.session_state.processed_audio_hash:
-            with st.spinner("Transcription de votre voix en cours…"):
-                try:
-                    transcript = client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=(
-                            getattr(audio_value, "name", "recording.wav"),
-                            audio_bytes,
-                            getattr(audio_value, "type", None) or "audio/wav",
-                        ),
-                    )
-                    st.session_state.pending_audio_text = transcript.text.strip()
-                    st.session_state.processed_audio_hash = audio_hash
-                except Exception as exc:
-                    st.error(f"Erreur transcription vocale : {exc}")
-                    st.session_state.processed_audio_hash = audio_hash
-
-    # Affichage du fil de discussion
-    for idx, msg in enumerate(history):
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-            if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
-                speak_text(msg["content"])
-
-        # Suggestions d'étayage, déclencheur de Quiz, et Générateur d'Image
-        if msg["role"] == "assistant" and idx == len(history) - 1:
-            st.markdown("💡 **Suggestions rapides d'étayage :**")
-            col1, col2, col3, col4 = st.columns(4)
-            btn_query = None
-            with col1:
-                if st.button("📖 Expliquer simplement", key=f"s1_{idx}", use_container_width=True):
-                    btn_query = "Peux-tu m'expliquer cette notion plus simplement avec une analogie visuelle en français ?"
-            with col2:
-                if st.button("📝 Exemple concret", key=f"s2_{idx}", use_container_width=True):
-                    btn_query = "Donne-moi un exemple concret issu du quotidien manitobain ou de notre cours."
-            with col3:
-                if st.button("🎥 Vidéo YouTube", key=f"s3_{idx}", use_container_width=True):
-                    btn_query = "Propose-moi un lien de recherche YouTube cliquable pour visualiser ce concept."
-            with col4:
-                if st.button("🚀 Approfondir", key=f"s4_{idx}", use_container_width=True):
-                    btn_query = "Comment relier ce concept à un défi scientifique plus avancé ou universitaire ?"
-
-            if btn_query:
-                st.session_state.next_question = btn_query
-                st.rerun()
-
-            st.markdown("")
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                quiz_btn = st.button("🎯 🎲 Générer un quiz de 10 questions sur notre discussion", key=f"quiz_btn_{idx}", use_container_width=True)
-            with col_b2:
-                image_btn = st.button("🎨 🖼️ Illustrer cette notion (RAG Souverain)", key=f"img_btn_{idx}", use_container_width=True)
-
-            if quiz_btn:
-                with st.spinner("Conception du quiz formatif personnalisé…"):
-                    recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
-                    quiz = generate_qcm_from_context(
-                        course_name,
-                        course["system"] + "\n" + mode_info["prompt"],
-                        recent_discussion,
-                        number_questions=10,
-                    )
-                if quiz and "questions" in quiz:
-                    st.session_state.quiz_data = quiz
-                    st.session_state.quiz_submitted = False
-                    st.rerun()
-                else:
-                    st.error("Génération du quiz momentanément indisponible.")
-            
-            if image_btn:
-                with st.spinner("Création de l'illustration scientifique sur mesure…"):
-                    recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-4:]])
-                    all_chunks = load_pdf_chunks(str(folder))
-                    relevant_chunks = retrieve_chunks(recent_discussion, all_chunks)
-                    chunks_text = "\n\n".join(c["text"] for c in relevant_chunks) if relevant_chunks else "Données générales du cours."
-                    
-                    img_url = generer_image_souveraine(chunks_text, recent_discussion)
-                    if img_url:
-                        st.image(img_url, caption="Schéma illustratif basé sur votre leçon souveraine (FIPPA Compliant)")
-                    else:
-                        st.error("Impossible de concevoir l'illustration pour le moment.")
-
-    # Affichage du Quiz ACTIF
-    if st.session_state.quiz_data:
-        questions = st.session_state.quiz_data.get("questions", [])
-        total = len(questions)
-        st.divider()
-        st.subheader(f"🎯 Quiz d'entraînement formatif — {course_name}")
-        st.write(f"**{total} questions** · Adapté à votre échange actuel")
-
-        if not st.session_state.quiz_submitted:
-            with st.form("qcm_exam_form"):
-                user_answers = {}
-                for i, item in enumerate(questions):
-                    st.markdown(f"**Question {i + 1} sur {total} :** {item['question']}")
-                    labels = [f"{L}. {item['options'][L]}" for L in ("A", "B", "C", "D")]
-                    choice = st.radio(
-                        "Votre réponse :",
-                        labels,
-                        index=None,
-                        key=f"q_ans_{i}",
-                    )
-                    user_answers[i] = choice
-                    with st.expander("💡 Indice d'étayage"):
-                        st.write(item.get("hint", "Pas d'indice particulier."))
-                    st.divider()
-
-                submitted = st.form_submit_button("✅ Soumettre le quiz et obtenir l'analyse", type="primary")
-
-            if submitted:
-                st.session_state.quiz_answers = user_answers
-                st.session_state.quiz_submitted = True
-                st.rerun()
-
-        else:
-            score = 0
-            user_answers = st.session_state.quiz_answers
-            st.markdown("### 📊 Analyse détaillée des résultats :")
-            for i, item in enumerate(questions):
-                ans = user_answers.get(i)
-                correct_letter = item["correct"].upper()
-                st.markdown(f"**Q{i + 1} : {item['question']}**")
-
-                if ans:
-                    selected_letter = ans[0].upper()
-                    if selected_letter == correct_letter:
-                        score += 1
-                        st.success(f"✅ Exact ! Votre choix : {ans}\n\n*{item['explanation']}*")
-                    else:
-                        st.error(f"❌ À revoir. Votre choix : {ans} | Bonne réponse : **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*")
-                else:
-                    st.warning(f"⚠️ Non répondu. Réponse attendue : **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*")
-                st.markdown("---")
-
-            pct = (score / total) * 100 if total > 0 else 0
-            st.markdown(f"## 🏆 Score obtenu : {score} / {total} ({pct:.0f}%)")
-            if score >= 8:
-                st.balloons()
-                st.success("🎉 Excellente maîtrise des résultats d'apprentissage ciblés !")
-            elif score >= 5:
-                st.info("👍 Bon niveau de base. Poursuivez les échanges socratiques pour consolider.")
-            else:
-                st.warning("💡 Prenez le temps de revoir les concepts clés avec le tuteur.")
-
-            if st.button("🔄 Fermer le quiz et reprendre la discussion"):
-                st.session_state.quiz_data = None
-                st.session_state.quiz_submitted = False
-                st.session_state.quiz_answers = {}
-                st.rerun()
-
-        st.divider()
-
-    # Traitement des requêtes textuelles et vocales
-    if st.session_state.pending_audio_text:
-        st.info("Transcription vocale prête — Validez ou ajustez le texte avant l'envoi :")
-        with st.form("transcript_form", clear_on_submit=True):
-            corrected_text = st.text_area("Texte transcrit :", value=st.session_state.pending_audio_text, height=90)
-            if st.form_submit_button("Envoyer la question"):
-                st.session_state.pending_audio_text = None
-                st.session_state.next_question = corrected_text.strip()
-                st.rerun()
-
-    typed_q = st.chat_input("Posez votre question en français...")
-    active_question = typed_q or st.session_state.pop("next_question", None)
-
-    if active_question and active_question.strip():
-        active_question = active_question.strip()
-        history.append({"role": "user", "content": active_question})
-        with st.chat_message("user"):
-            st.markdown(active_question)
-
-        # RAG Local hybride
-        all_chunks = load_pdf_chunks(str(folder))
-        relevant_chunks = retrieve_chunks(active_question, all_chunks)
-        if relevant_chunks:
-            excerpts = "\n\n".join(f"[{c['source']}]\n{c['text']}" for c in relevant_chunks)
-            context_block = (
-                "Extraits officiels extraits des documents locaux (Curriculum BEF & Notes de l'enseignant) :\n\n"
-                + excerpts
-                + "\n\nConsigne : Utilise prioritairement ces sources, mentionne leur origine et respecte l'esprit du programme."
-            )
-            st.caption("Documents sources mobilisés : " + ", ".join(sorted({c["source"] for c in relevant_chunks})))
-        else:
-            context_block = "Aucun passage spécifique n'a été extrait des PDF locaux. Réponds selon les normes curriculaires manitobaines."
-
-        api_history = [m for m in history if not (m["role"] == "assistant" and m["content"] == course["welcome"])]
-        system_instructions = (
-            f"{course['system']}\n\n{mode_info['prompt']}\n\n{context_block}\n\n"
-            "RAPPEL CARDINAL : Réponds TOUJOURS en français. Pose UNE SEULE question socratique à la fois. Encourage l'élève."
-        )
-
-        with st.chat_message("assistant"):
-            with st.spinner("Réflexion socratique…"):
-                try:
-                    res = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[{"role": "system", "content": system_instructions}] + api_history[-10:],
-                        temperature=mode_info["temp"],
-                    )
-                    assistant_answer = res.choices[0].message.content
-                    st.markdown(assistant_answer)
-                    history.append({"role": "assistant", "content": assistant_answer})
-                    if enable_voice_output:
-                        speak_text(assistant_answer)
-                except Exception as err:
-                    st.error(f"Erreur lors de la génération de la réponse : {err}")
-
-        st.session_state.histories_by_course[course_name] = history
-        st.rerun()
-
-
-# =============================================================================
-# ESPACE 2 : ENSEIGNANT BEF & AUXILIAIRE (EA)
-# =============================================================================
-elif navigation_espace == "👩‍🏫 Espace Enseignant & Auxiliaire (BEF / EA)":
-    st.title("👩‍🏫 Espace Pédagogique — Conception Curriculaire & Inclusion")
-    st.caption("Conforme aux directives du BEF, à la Conception Universelle de l'Apprentissage (CUA) et aux lois FIPPA")
-
-    tab_bef, tab_eval, tab_ea, tab_notebook, tab_video = st.tabs([
-        "📋 Planification Différenciée (BEF / PAT / Défi)",
-        "📊 Évaluation Formative & par les Pairs",
-        "🤝 Coordination Auxiliaire (EA)",
-        "📚 Mon Classeur (Esprit NotebookLM)",
-        "🎬 Studio Capsule Dialoguée (Continuité Blizzard)"
-    ])
-
-    with tab_bef:
-        st.subheader("Générateur de Leçon Curriculaire Trifide")
-        st.write("Conçoit simultanément le socle commun, les adaptations PAT et les pistes d'enrichissement pour élèves avancés.")
-        
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            ras_input = st.text_input("Code RAS BEF ou Résultat d'apprentissage :", value="B12-2-03 (Lois de Mendel)")
-            sujet_lecon = st.text_input("Sujet de la leçon :", value="Monohybridisme et grilles de Punnett")
-        with col_t2:
-            profil_pat = st.text_area("Besoins particuliers identifiés (PAT / Dyslexie / Francisation) :", 
-                                      value="2 élèves en PAT (besoin de textes aérés et d'étayage visuel) ; 1 élève en francisation récente.")
-            profil_avance = st.text_area("Besoins d'enrichissement (Élèves avancés / Douance) :", 
-                                         value="3 élèves très rapides ayant déjà maîtrisé les calculs de probabilités simples.")
-
-        col_btn1, col_btn2 = st.columns([1, 1])
-        with col_btn1:
-            l_btn = st.button("🚀 Générer la leçon multiniveau complète", type="primary", use_container_width=True)
-        with col_btn2:
-            img_btn_t = st.button("🖼️ Générer une illustration pédagogique souveraine", use_container_width=True)
-
-        if l_btn:
-            with st.spinner("Génération du plan pédagogique CUA…"):
-                p_prompt = (
-                    "Tu es un conseiller pédagogique expert du Bureau de l'éducation française (BEF) au Manitoba.\n"
-                    f"Crée un plan de leçon rigoureux, complet et structuré pour le cours : {course_name}.\n"
-                    f"- Résultat d'apprentissage : {ras_input}\n"
-                    f"- Sujet : {sujet_lecon}\n"
-                    f"- Adaptations PAT : {profil_pat}\n"
-                    f"- Élèves avancés : {profil_avance}\n\n"
-                    "Structure obligatoire du document :\n"
-                    "1. 🎯 Objectifs ministériels et critères de réussite observables (BEF).\n"
-                    "2. 📖 Déroulement de classe (Amorce 10 min, Enseignement explicite 15 min, Pratique guidée 25 min, Objectivation 10 min).\n"
-                    "3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes découpées, réduction de la charge cognitive sans baisse d'exigence).\n"
-                    "4. 🚀 Volet Enrichissement & Défi (Tâches à haut niveau taxonomique de Bloom, problèmes ouverts, liens de recherche pour élèves avancés).\n"
-                    "5. 💡 Grille de 3 questions socratiques clés pour le bilan.\n"
-                )
-                resp = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": p_prompt}],
-                    temperature=0.3
-                )
-                st.session_state.current_lesson_plan = resp.choices[0].message.content
-                st.markdown(st.session_state.current_lesson_plan)

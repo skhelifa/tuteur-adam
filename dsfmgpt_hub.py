@@ -353,14 +353,14 @@ def retrieve_chunks(question: str, chunks: list, limit: int = 4):
 # --- LISTE DES 8 MODULES DU SYSTÈME ---
 MODULES_LIST = [
     "🏠 Accueil & Vue d'Ensemble",
-    "1. 👩‍🏫 Assistant BEF (Module 1)",
-    "2. 🎓 Tuteur Socratique (Module 2)",
-    "3. 🏢 Admin & Impact MTS (Module 3)",
-    "4. 🛡️ InfoSec & FIPPA (Module 4)",
-    "5. 💻 STIAM & Sandbox Codage (Module 5)",
-    "6. 🔄 Suppléance & ERP Atrieve (Module 6)",
-    "7. 🤝 Auxiliaires EA & Inclusion (Module 7)",
-    "8. 👨‍👩‍👦 Portail Parents & Tuteurs (Module 8)"
+    "1. 👩‍🏫 Assistant BEF ",
+    "2. 🎓 Tuteur Socratique ",
+    "3. 🏢 Admin & Impact MTS ",
+    "4. 🛡️ InfoSec & FIPPA ",
+    "5. 💻 STIAM & Sandbox Codage ",
+    "6. 🔄 Suppléance & ERP Atrieve ",
+    "7. 🤝 Auxiliaires EA & Inclusion ",
+    "8. 👨‍👩‍👦 Portail Parents & Tuteurs "
 ]
 
 # --- BARRE LATÉRALE DE CONTRÔLE ---

@@ -12,7 +12,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
-# DSFMGPT / Adam's Study Tutor — Écosystème Pédagogique Souverain DSFM / BEF
+# DSFMGPT / Hub — Écosystème Pédagogique Souverain DSFM / BEF Manitoba
 # -----------------------------------------------------------------------------
 
 APP_DIR = Path(__file__).parent
@@ -114,7 +114,43 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 
-# Fonctions Audio / Synthèse Vocale Web
+# Fonctions d'illustration Souveraine (DALL-E Grounded)
+def generer_image_souveraine(contexte_texte: str, focus_visuel: str):
+    """
+    Génère une illustration pédagogique et scientifique stricte basée exclusivement sur les faits locaux
+    récupérés de la base de données souveraine (RAG), garantissant la véracité de l'image.
+    """
+    try:
+        distill_prompt = f"""Tu es un conseiller en design pédagogique et illustrateur scientifique pour la DSFM.
+Conçois un prompt descriptif ultra-précis pour une illustration ou un schéma éducatif de 12e année basé EXCLUSIVEMENT sur les données factuelles et locales fournies ci-dessous.
+Surtout : pas de texte complexe, de mots ou de légendes floues ou mal orthographiés (limite au strict minimum ou supprime le texte pour privilégier des symboles ou des repères visuels clairs).
+
+Sujet d'étude : {focus_visuel}
+Données contextuelles issues de notre base souveraine : {contexte_texte}
+
+Décris une illustration scientifique détaillée, de type schéma de biologie, diagramme, dessin réaliste ou plan technique, sans fioritures esthétiques ou artistiques, purement pédagogique, sur un fond sobre."""
+        
+        res = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": distill_prompt}],
+            temperature=0.3
+        )
+        prompt_image = res.choices[0].message.content.strip()
+        
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt_image,
+            size="1024x1024",
+            quality="standard",
+            n=1
+        )
+        return response.data[0].url
+    except Exception as exc:
+        st.error(f"Erreur lors de la génération de l'image : {exc}")
+        return None
+
+
+# Synthèse Vocale Web
 def speak_text(text: str):
     clean_text = (
         text.replace("'", "\\'")
@@ -134,12 +170,7 @@ def speak_text(text: str):
 
 
 def stop_speech():
-    js_code = """
-    <script>
-        window.speechSynthesis.cancel();
-    </script>
-    """
-    components.html(js_code, height=0)
+    components.html("<script>window.speechSynthesis.cancel();</script>", height=0)
 
 
 # Variables d'état de session
@@ -208,7 +239,6 @@ def load_pdf_chunks(folder_string: str):
     chunks = []
     if not folder_path.exists():
         return chunks
-    # Parcourt également les sous-dossiers (ex. ressources de l'enseignant)
     for pdf_path in sorted(folder_path.glob("**/*.pdf")):
         try:
             reader = PdfReader(str(pdf_path))
@@ -284,7 +314,8 @@ with st.sidebar:
         [
             "🎓 Espace Élève (Tuteur Socratique)",
             "👩‍🏫 Espace Enseignant & Auxiliaire (BEF / EA)",
-            "👨‍👩‍👦 Espace Parents et Tuteurs légaux"
+            "👨‍👩‍👦 Espace Parents et Tuteurs légaux",
+            "🏢 Espace Direction, Admin & Impact (Module 3)"
         ]
     )
     
@@ -352,7 +383,7 @@ if navigation_espace == "🎓 Espace Élève (Tuteur Socratique)":
             if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
                 speak_text(msg["content"])
 
-        # Suggestions d'étayage et déclencheur de Quiz
+        # Suggestions d'étayage, déclencheur de Quiz, et Générateur d'Image
         if msg["role"] == "assistant" and idx == len(history) - 1:
             st.markdown("💡 **Suggestions rapides d'étayage :**")
             col1, col2, col3, col4 = st.columns(4)
@@ -375,7 +406,13 @@ if navigation_espace == "🎓 Espace Élève (Tuteur Socratique)":
                 st.rerun()
 
             st.markdown("")
-            if st.button("🎯 🎲 Générer un quiz de 10 questions sur notre discussion", key=f"quiz_btn_{idx}", use_container_width=True):
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                quiz_btn = st.button("🎯 🎲 Générer un quiz de 10 questions sur notre discussion", key=f"quiz_btn_{idx}", use_container_width=True)
+            with col_b2:
+                image_btn = st.button("🎨 🖼️ Illustrer cette notion (RAG Souverain)", key=f"img_btn_{idx}", use_container_width=True)
+
+            if quiz_btn:
                 with st.spinner("Conception du quiz formatif personnalisé…"):
                     recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
                     quiz = generate_qcm_from_context(
@@ -390,8 +427,21 @@ if navigation_espace == "🎓 Espace Élève (Tuteur Socratique)":
                     st.rerun()
                 else:
                     st.error("Génération du quiz momentanément indisponible.")
+            
+            if image_btn:
+                with st.spinner("Création de l'illustration scientifique sur mesure…"):
+                    recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-4:]])
+                    all_chunks = load_pdf_chunks(str(folder))
+                    relevant_chunks = retrieve_chunks(recent_discussion, all_chunks)
+                    chunks_text = "\n\n".join(c["text"] for c in relevant_chunks) if relevant_chunks else "Données générales du cours."
+                    
+                    img_url = generer_image_souveraine(chunks_text, recent_discussion)
+                    if img_url:
+                        st.image(img_url, caption="Schéma illustratif basé sur votre leçon souveraine (FIPPA Compliant)")
+                    else:
+                        st.error("Impossible de concevoir l'illustration pour le moment.")
 
-    # Affichage du Quiz ACTIF (Placé directement sous la discussion)
+    # Affichage du Quiz ACTIF
     if st.session_state.quiz_data:
         questions = st.session_state.quiz_data.get("questions", [])
         total = len(questions)
@@ -527,10 +577,11 @@ elif navigation_espace == "👩‍🏫 Espace Enseignant & Auxiliaire (BEF / EA)
     st.title("👩‍🏫 Espace Pédagogique — Conception Curriculaire & Inclusion")
     st.caption("Conforme aux directives du BEF, à la Conception Universelle de l'Apprentissage (CUA) et aux lois FIPPA")
 
-    tab_bef, tab_ea, tab_notebook, tab_video = st.tabs([
+    tab_bef, tab_eval, tab_ea, tab_notebook, tab_video = st.tabs([
         "📋 Planification Différenciée (BEF / PAT / Défi)",
+        "📊 Évaluation Formative & par les Pairs",
         "🤝 Coordination Auxiliaire (EA)",
-        "📚 Mon Classeur de Cours (Esprit NotebookLM)",
+        "📚 Mon Classeur (Esprit NotebookLM)",
         "🎬 Studio Capsule Dialoguée (Continuité Blizzard)"
     ])
 
@@ -548,7 +599,13 @@ elif navigation_espace == "👩‍🏫 Espace Enseignant & Auxiliaire (BEF / EA)
             profil_avance = st.text_area("Besoins d'enrichissement (Élèves avancés / Douance) :", 
                                          value="3 élèves très rapides ayant déjà maîtrisé les calculs de probabilités simples.")
 
-        if st.button("🚀 Générer la leçon multiniveau complète", type="primary"):
+        col_btn1, col_btn2 = st.columns([1, 1])
+        with col_btn1:
+            l_btn = st.button("🚀 Générer la leçon multiniveau complète", type="primary", use_container_width=True)
+        with col_btn2:
+            img_btn_t = st.button("🖼️ Générer une illustration pédagogique souveraine", use_container_width=True)
+
+        if l_btn:
             with st.spinner("Génération du plan pédagogique CUA…"):
                 p_prompt = f"""Tu es un conseiller pédagogique expert du Bureau de l'éducation française (BEF) au Manitoba.
 Crée un plan de leçon rigoureux, complet et structuré pour le cours : {course_name}.
@@ -560,133 +617,4 @@ Crée un plan de leçon rigoureux, complet et structuré pour le cours : {course
 Structure obligatoire du document :
 1. 🎯 Objectifs ministériels et critères de réussite observables (BEF).
 2. 📖 Déroulement de classe (Amorce 10 min, Enseignement explicite 15 min, Pratique guidée 25 min, Objectivation 10 min).
-3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes découpées, réduction de la charge cognitive sans baisse d'exigence).
-4. 🚀 Volet Enrichissement & Défi (Tâches à haut niveau taxonomique de Bloom, problèmes ouverts, liens de recherche pour élèves avancés).
-5. 💡 Grille de 3 questions socratiques clés pour le bilan.
-"""
-                resp = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": p_prompt}],
-                    temperature=0.3
-                )
-                st.markdown(resp.choices[0].message.content)
-
-    with tab_ea:
-        st.subheader("Coordination avec l'Auxiliaire d'Enseignement (EA Daily Briefing)")
-        st.write("Produit une feuille de route claire pour l'auxiliaire afin d'accompagner un élève sous PAT sans faire le devoir à sa place.")
-        
-        contenu_cours = st.text_area("Résumé de la leçon du jour ou extrait du cours :", 
-                                     value="Exercices d'application sur les croisements génétiques et calculs de ratios phénotypiques (3:1).",
-                                     height=100)
-        
-        if st.button("📋 Générer la fiche de mission pour l'auxiliaire"):
-            with st.spinner("Rédaction de la fiche de mission EA…"):
-                ea_prompt = f"""Tu es un spécialiste de l'inclusion scolaire au Manitoba.
-Rédige une fiche de mission minute destinée à un auxiliaire d'enseignement (Educational Assistant) accompagnant un élève sous PAT.
-Leçon du jour : {contenu_cours}
-
-Structure attendue :
-1. 🎯 Rôle précis de l'auxiliaire pendant la période (Ce qu'il fait pendant le cours magistral vs travail individuel).
-2. 💡 Guide de questionnement socratique : 3 questions ciblées à poser à l'élève en cas de blocage pour stimuler son autonomie.
-3. ⚠️ Vigilances et pièges à éviter (ex. ne pas faire le calcul à sa place, surveiller les signes de fatigue).
-4. 📝 Mini-grille d'observation en 3 critères rapides pour le retour à l'enseignant titulaire en fin d'heure.
-"""
-                resp_ea = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": ea_prompt}],
-                    temperature=0.3
-                )
-                st.markdown(resp_ea.choices[0].message.content)
-
-    with tab_notebook:
-        st.subheader("📚 Mon Espace Documents : Enrichissement du cours (Esprit NotebookLM)")
-        st.caption("Déposez vos propres notes de cours, devoirs types ou manuels. Ils sont indexés localement dans le RAG pour vos élèves.")
-        
-        custom_folder = DOCS_DIR / course["folder"] / "custom_teacher"
-        custom_folder.mkdir(parents=True, exist_ok=True)
-        
-        uploaded_files = st.file_uploader("Ajouter des fichiers PDF personnels pour ce cours", type=["pdf"], accept_multiple_files=True)
-        if uploaded_files:
-            for f in uploaded_files:
-                target_file = custom_folder / f.name
-                with open(target_file, "wb") as buffer:
-                    buffer.write(f.getbuffer())
-            st.success(f"✅ {len(uploaded_files)} ressource(s) ajoutée(s) et indexée(s) avec succès dans le moteur RAG !")
-            st.cache_data.clear()
-
-        existing_custom = list(custom_folder.glob("*.pdf"))
-        if existing_custom:
-            st.markdown("#### Fichiers personnels actuellement actifs :")
-            for doc in existing_custom:
-                st.write(f"📄 `{doc.name}`")
-
-    with tab_video:
-        st.subheader("🎬 Studio Capsule Dialoguée Élève-Professeur (Continuité Blizzard)")
-        st.write("Génère un script scénarisé interactif entre un élève virtuel et le professeur, prêt pour le clonage vocal éthique et l'animation.")
-        
-        notion_cle = st.text_input("Notion clé à scénariser :", value="La différence entre allèle dominant et allèle récessif")
-        if st.button("🎥 Générer le script du dialogue vidéo"):
-            with st.spinner("Scénarisation de la capsule pédagogique…"):
-                vid_prompt = f"""Rédige un script de dialogue vivant et chaleureux de 2 minutes entre un élève (curieux mais hésitant) et son enseignant (bienveillant et pédagogue) pour la DSFM.
-Matière : {course_name}
-Notion : {notion_cle}
-
-Format attendu :
-- [Élève] : Pose les vraies questions de blocage du quotidien.
-- [Enseignant] : Répond avec des analogies simples et invite l'élève à déduire la solution.
-- [Visuel suggéré] : Description des schémas ou animations qui doivent apparaître à l'écran.
-"""
-                resp_vid = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": vid_prompt}],
-                    temperature=0.6
-                )
-                st.markdown(resp_vid.choices[0].message.content)
-
-
-# =============================================================================
-# ESPACE 3 : PARENTS ET TUTEURS LÉGAUX
-# =============================================================================
-elif navigation_espace == "👨‍👩‍👦 Espace Parents et Tuteurs légaux":
-    st.title("👨‍👩‍👦 Espace Parents, Tutrices et Tuteurs Légaux")
-    st.caption("Suivi du cheminement, projets collaboratifs et liaison école-foyer (Conformité FIPPA & Loi sur les écoles publiques)")
-
-    tab_suivi, tab_binome, tab_liaison = st.tabs([
-        "📊 Métriques d'Effort & Autonomie",
-        "🤝 Projets en Binôme (Esprit TeamSnap)",
-        "📬 Liaison École-Maison"
-    ])
-
-    with tab_suivi:
-        st.subheader("Indicateurs d'activité de la semaine")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sessions d'étude avec le tuteur", "4", "+1 vs sem. passée")
-        c2.metric("Quiz complétés", "3", "Moyenne : 83%")
-        c3.metric("Notion approfondie", "Génétique 40S", "Solide")
-        
-        st.markdown("#### Dernières validations d'apprentissage :")
-        st.write("• **Biologie 40S** : 9/10 au quiz formatif (1 indice socratique utilisé).")
-        st.write("• **Anglais 40S** : Structuration de texte argumentatif complétée avec succès.")
-
-    with tab_binome:
-        st.subheader("Coordination des travaux d'équipe & Binômes")
-        st.info("🔒 La participation à un groupe de travail nécessite le consentement explicite du parent ou tuteur légal de chaque participant.")
-        
-        with st.expander("🔬 Laboratoire d'hérédité mendélienne — Binôme avec Marc L.", expanded=True):
-            st.write("**Échéance divisionnaire :** Vendredi 30 octobre")
-            st.progress(70, text="Progression du dossier : 70%")
-            st.checkbox("Étape 1 : Hypothèses et protocoles de recherche (Validé)", value=True, disabled=True)
-            st.checkbox("Étape 2 : Recueil des données de croisement (Validé)", value=True, disabled=True)
-            st.checkbox("Étape 3 : Révision finale avec le tuteur socratique", value=False)
-            st.write("📍 **Coordination logistique :** Séance de révision partagée prévue à la bibliothèque le mercredi à 16 h 30.")
-
-    with tab_liaison:
-        st.subheader("Synthèse hebdomadaire transmise au foyer")
-        st.success(
-            "💡 **Note pédagogique de l'équipe :** Adam fait preuve d'une excellente assiduité dans ses démarches socratiques. "
-            "Il formule ses questions avec clarté en français. Encouragez-le à continuer ses sessions régulières !"
-        )
-
-# Pied de page institutionnel
-st.divider()
-st.caption("DSFMGPT · Conçu avec rigueur pour l'excellence et l'équité éducative au Manitoba ❤️ · 2026-2032")
+3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes dé

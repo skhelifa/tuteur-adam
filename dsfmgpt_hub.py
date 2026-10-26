@@ -607,14 +607,24 @@ elif navigation_espace == "👩‍🏫 Espace Enseignant & Auxiliaire (BEF / EA)
 
         if l_btn:
             with st.spinner("Génération du plan pédagogique CUA…"):
-                p_prompt = f"""Tu es un conseiller pédagogique expert du Bureau de l'éducation française (BEF) au Manitoba.
-Crée un plan de leçon rigoureux, complet et structuré pour le cours : {course_name}.
-- Résultat d'apprentissage : {ras_input}
-- Sujet : {sujet_lecon}
-- Adaptations PAT : {profil_pat}
-- Élèves avancés : {profil_avance}
-
-Structure obligatoire du document :
-1. 🎯 Objectifs ministériels et critères de réussite observables (BEF).
-2. 📖 Déroulement de classe (Amorce 10 min, Enseignement explicite 15 min, Pratique guidée 25 min, Objectivation 10 min).
-3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes dé
+                p_prompt = (
+                    "Tu es un conseiller pédagogique expert du Bureau de l'éducation française (BEF) au Manitoba.\n"
+                    f"Crée un plan de leçon rigoureux, complet et structuré pour le cours : {course_name}.\n"
+                    f"- Résultat d'apprentissage : {ras_input}\n"
+                    f"- Sujet : {sujet_lecon}\n"
+                    f"- Adaptations PAT : {profil_pat}\n"
+                    f"- Élèves avancés : {profil_avance}\n\n"
+                    "Structure obligatoire du document :\n"
+                    "1. 🎯 Objectifs ministériels et critères de réussite observables (BEF).\n"
+                    "2. 📖 Déroulement de classe (Amorce 10 min, Enseignement explicite 15 min, Pratique guidée 25 min, Objectivation 10 min).\n"
+                    "3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes découpées, réduction de la charge cognitive sans baisse d'exigence).\n"
+                    "4. 🚀 Volet Enrichissement & Défi (Tâches à haut niveau taxonomique de Bloom, problèmes ouverts, liens de recherche pour élèves avancés).\n"
+                    "5. 💡 Grille de 3 questions socratiques clés pour le bilan.\n"
+                )
+                resp = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": p_prompt}],
+                    temperature=0.3
+                )
+                st.session_state.current_lesson_plan = resp.choices[0].message.content
+                st.markdown(st.session_state.current_lesson_plan)

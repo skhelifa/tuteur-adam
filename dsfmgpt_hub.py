@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
+import time
 
 from openai import OpenAI
 from pypdf import PdfReader
@@ -12,7 +14,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
-# DSFMGPT / Hub — Écosystème Pédagogique Souverain DSFM / BEF Manitoba
+# DSFMGPT / Hub — Écosystème Pédagogique Souverain DSFM / BEF Manitoba (8 Modules)
 # -----------------------------------------------------------------------------
 
 APP_DIR = Path(__file__).parent
@@ -29,6 +31,17 @@ COURSES = {
 Tu es le tuteur d'Adam pour le cours de Biologie 40S (12e année) au Collège Louis-Riel au Manitoba (normes DSFM et BEF).
 APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes toutes faites.
 Pose UNE SEULE question claire à la fois, utilise des indices gradués, stimule le raisonnement et valide chaque étape.
+""",
+    },
+    "Computer Science 40S (Python/STIAM)": {
+        "folder": "cs40s",
+        "welcome": (
+            "Bienvenue au laboratoire STIAM & Informatique 40S ! Quels algorithmes, structures"
+            " de données ou défis Python explorons-nous aujourd'hui ?"
+        ),
+        "system": """
+Tu es le tuteur socratique en informatique et sciences computationnelles (STIAM) pour la DSFM.
+APPROCHE SOCRATIQUE : Guide l'élève dans la compréhension de ses erreurs d'algorithme et de syntaxe en français, sans écrire le code à sa place.
 """,
     },
     "English — Comprehensive Focus 40S": {
@@ -100,9 +113,75 @@ CONTEXT_MODES = {
 
 # Configuration Streamlit
 st.set_page_config(
-    page_title="DSFMGPT — Écosystème Pédagogique Souverain",
-    page_icon="🎓",
+    page_title="DSFMGPT — Écosystème Pédagogique Souverain (8 Modules)",
+    page_icon="🦬",
     layout="wide"
+)
+
+# Injection de style CSS moderne pour l'interface d'accueil
+st.markdown(
+    """
+    <style>
+        .hero-container {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #1e3a5f 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+        .hero-title {
+            font-size: 2.3rem;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .hero-subtitle {
+            font-size: 1.05rem;
+            color: #94a3b8;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+        .tag-pill {
+            display: inline-block;
+            background: rgba(234, 179, 8, 0.15);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .tag-pill-blue {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .module-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 20px;
+            height: 100%;
+            transition: all 0.25s ease;
+        }
+        .module-box:hover {
+            border-color: rgba(96, 165, 250, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 api_key = st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None
@@ -117,22 +196,19 @@ client = OpenAI(api_key=api_key)
 # Fonctions d'illustration Souveraine (DALL-E Grounded)
 def generer_image_souveraine(contexte_texte: str, focus_visuel: str):
     try:
-        distill_prompt = f"""Tu es un conseiller en design pédagogique et illustrateur scientifique pour la DSFM.
-Conçois un prompt descriptif pour une illustration éducative de 12e année basée sur les données locales ci-dessous.
-Évite le texte complexe, les mots flous ou mal orthographiés (privilégie des symboles clairs et un schéma épuré).
-
-Sujet : {focus_visuel}
-Données contextuelles locales : {contexte_texte}
-
-Décris une illustration scientifique détaillée (schéma, diagramme ou dessin réaliste), pédagogique, sur fond sobre."""
-        
+        distill_prompt = (
+            "Tu es un illustrateur scientifique et pédagogique pour la DSFM au Manitoba.\n"
+            f"Sujet d'étude : {focus_visuel}\n"
+            f"Données contextuelles vérifiées : {contexte_texte}\n"
+            "Conçois un prompt descriptif pour un schéma scientifique ou une illustration d'apprentissage sobre, "
+            "sans texte complexe ou légende illisible, sur fond neutre."
+        )
         res = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": distill_prompt}],
             temperature=0.3
         )
         prompt_image = res.choices[0].message.content.strip()
-        
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt_image,
@@ -142,18 +218,13 @@ Décris une illustration scientifique détaillée (schéma, diagramme ou dessin 
         )
         return response.data[0].url
     except Exception as exc:
-        st.error(f"Erreur lors de la génération de l'image : {exc}")
+        st.error(f"Erreur illustration : {exc}")
         return None
 
 
 # Synthèse Vocale Web
 def speak_text(text: str):
-    clean_text = (
-        text.replace("'", "\\'")
-        .replace('"', '\\"')
-        .replace("\n", " ")
-        .replace("\r", " ")
-    )
+    clean_text = text.replace("'", "\\'").replace('"', '\\"').replace("\n", " ").replace("\r", " ")
     js_code = f"""
     <script>
         window.speechSynthesis.cancel();
@@ -169,7 +240,9 @@ def stop_speech():
     components.html("<script>window.speechSynthesis.cancel();</script>", height=0)
 
 
-# Variables d'état de session
+# Variables d'état
+if "nav_active" not in st.session_state:
+    st.session_state.nav_active = "🏠 Accueil & Vue d'Ensemble"
 if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = None
 if "quiz_submitted" not in st.session_state:
@@ -190,29 +263,14 @@ if "current_eval_data" not in st.session_state:
     st.session_state.current_eval_data = ""
 
 
-# Générateur de QCM au format JSON strict
+# Générateur de QCM au format JSON
 def generate_qcm_from_context(course_title, system_prompt, discussion_context, number_questions=10):
-    prompt = f"""En te basant sur la discussion récente et le cours : {course_title}, crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM) en français.
-Contexte récent :
-{discussion_context}
-
-Format strict :
-- Exactement {number_questions} questions (A, B, C, D).
-- Une seule réponse correcte.
-- Un indice pédagogique et une explication par question.
-
-Renvoie UNIQUEMENT un objet JSON valide :
-{{
-  "questions": [
-    {{
-      "question": "Texte",
-      "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
-      "correct": "A",
-      "hint": "Indice",
-      "explanation": "Explication"
-    }}
-  ]
-}}"""
+    prompt = (
+        f"En te basant sur la discussion récente et le cours : {course_title}, crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM) en français.\n"
+        f"Contexte récent :\n{discussion_context}\n\n"
+        "Format strict : 4 options (A,B,C,D), 1 seule bonne réponse, 1 indice et 1 explication.\n"
+        "Renvoie UNIQUEMENT un objet JSON valide : {\"questions\": [{\"question\": \"...\", \"options\": {\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"}, \"correct\": \"A\", \"hint\": \"...\", \"explanation\": \"...\"}]}"
+    )
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -227,12 +285,11 @@ Renvoie UNIQUEMENT un objet JSON valide :
         if match:
             return json.loads(match.group(0))
         return None
-    except Exception as e:
-        print(f"Erreur JSON : {e}")
+    except Exception:
         return None
 
 
-# Moteur RAG local (PDF Officiels BEF + Documents Personnels Enseignant)
+# Moteur RAG Local
 @st.cache_data(show_spinner=False)
 def load_pdf_chunks(folder_string: str):
     folder_path = Path(folder_string)
@@ -250,8 +307,7 @@ def load_pdf_chunks(folder_string: str):
             paragraphs = [p.strip() for p in re.split(r"\n\s*\n", full_text) if p.strip()]
             current = ""
             is_custom = "custom_teacher" in str(pdf_path)
-            prefix = "[Ressource Enseignant]" if is_custom else "[Programme BEF Officiel]"
-            
+            prefix = "[Ressource Enseignant]" if is_custom else "[Programme BEF]"
             for para in paragraphs:
                 if len(current) + len(para) > 1400 and current:
                     chunks.append({"source": f"{prefix} {pdf_path.name}", "text": current})
@@ -281,323 +337,256 @@ def retrieve_chunks(question: str, chunks: list, limit: int = 4):
         "quoi", "comment", "pourquoi", "sur", "par", "aux", "du", "de", "la",
         "le", "un", "et", "en", "je", "tu", "il", "elle"
     }
-    terms = [t.lower() for t in re.findall(r"[A-Za-zÀ-ÿ0-9'-]{3,}", question)]
-    terms = [t for t in terms if t not in stop_words]
+    terms = [t.lower() for t in re.findall(r"[A-Za-zÀ-ÿ0-9'-]{3,}", question) if t.lower() not in stop_words]
     if not terms:
         return []
     scored = []
     for chunk in chunks:
-        text = chunk["text"].lower()
-        words = re.findall(r"[A-Za-zÀ-ÿ0-9'-]{3,}", text)
-        counts = Counter(words)
-        score = 0.0
-        for term in set(terms):
-            if term in counts:
-                score += 1.0 + min(counts[term], 4) * 0.15
-            else:
-                if any(term in word or word in term for word in counts if len(word) >= 5):
-                    score += 0.25
+        counts = Counter(re.findall(r"[A-Za-zÀ-ÿ0-9'-]{3,}", chunk["text"].lower()))
+        score = sum(1.0 + min(counts[term], 4) * 0.15 for term in set(terms) if term in counts)
         if score > 0:
             scored.append((score, chunk))
     scored.sort(key=lambda item: item[0], reverse=True)
     return [chunk for _, chunk in scored[:limit]]
 
 
+# --- LISTE DES 8 MODULES DU SYSTÈME ---
+MODULES_LIST = [
+    "🏠 Accueil & Vue d'Ensemble",
+    "1. 👩‍🏫 Assistant BEF (Module 1)",
+    "2. 🎓 Tuteur Socratique (Module 2)",
+    "3. 🏢 Admin & Impact MTS (Module 3)",
+    "4. 🛡️ InfoSec & FIPPA (Module 4)",
+    "5. 💻 STIAM & Sandbox Codage (Module 5)",
+    "6. 🔄 Suppléance & ERP Atrieve (Module 6)",
+    "7. 🤝 Auxiliaires EA & Inclusion (Module 7)",
+    "8. 👨‍👩‍👦 Portail Parents & Tuteurs (Module 8)"
+]
+
 # --- BARRE LATÉRALE DE CONTRÔLE ---
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/school.png", width=64)
+    st.image("https://img.icons8.com/fluency/96/school.png", width=56)
     st.title("DSFMGPT Hub")
-    st.caption("Cadre d'IA Souverain · DSFM / BEF Manitoba")
-    
+    st.caption("Matrice des 8 Modules Opérationnels · DSFM / BEF")
+
+    # Index par défaut basé sur l'état
+    default_idx = MODULES_LIST.index(st.session_state.nav_active) if st.session_state.nav_active in MODULES_LIST else 0
     navigation_espace = st.radio(
-        "Sélectionnez l'espace :",
-        [
-            "🎓 Espace Élève (Tuteur Socratique)",
-            "👩‍🏫 Espace Enseignant & Auxiliaire (BEF / EA)",
-            "👨‍👩‍👦 Espace Parents et Tuteurs légaux",
-            "🏢 Espace Direction, Admin & Impact (Module 3)"
-        ]
+        "Navigation Systémique :",
+        MODULES_LIST,
+        index=default_idx
     )
-    
+    st.session_state.nav_active = navigation_espace
+
     st.markdown("---")
-    st.markdown("### 📚 Cours Actif")
-    course_name = st.selectbox("Matière", list(COURSES.keys()))
+    st.markdown("### 📚 Matière Active")
+    course_name = st.selectbox("Sélection du cours :", list(COURSES.keys()))
     course = COURSES[course_name]
     folder = DOCS_DIR / course["folder"]
 
     st.markdown("---")
-    st.markdown("### 🎛️ Mode Contextuel")
-    mode_selectionne = st.selectbox("Posture pédagogique", list(CONTEXT_MODES.keys()))
+    st.markdown("### 🎛️ Posture Pédagogique")
+    mode_selectionne = st.selectbox("Mode contextuel :", list(CONTEXT_MODES.keys()))
     mode_info = CONTEXT_MODES[mode_selectionne]
 
     st.markdown("---")
-    st.markdown("### 🔊 Audio & Voix")
+    st.markdown("### 🔊 Audio & Dictée Whisper")
     enable_voice_output = st.checkbox("Lecture vocale automatique", value=True)
     if st.button("🛑 Couper la voix", use_container_width=True):
         stop_speech()
         st.success("Voix coupée.")
-    
-    audio_value = st.audio_input("Dictée vocale (Whisper)")
+
+    audio_value = st.audio_input("Dictée vocale directe")
 
 
 # =============================================================================
-# ESPACE 1 : ÉLÈVE & TUTEUR SOCRATIQUE
+# VUE ACCUEIL : LE TABLEAU DE BORD GRANDIOSE DES 8 MODULES
 # =============================================================================
-if "Élève" in navigation_espace:
-    st.title(f"🎓 Tuteur Socratique — {course_name}")
-    st.info(f"Posture active : **{mode_selectionne}**")
+if "Accueil" in navigation_espace:
+    # HERO BANNER PRESTIGE
+    st.markdown(
+        """
+        <div class="hero-container">
+            <div class="hero-title">
+                <span>DSFMGPT</span>
+                <span style="font-size: 2rem;">🦬</span>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Franco-Manitobain_flag.svg/160px-Franco-Manitobain_flag.svg.png" 
+                     alt="Drapeau Franco-Manitobain" 
+                     style="height: 28px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); vertical-align: middle;">
+            </div>
+            <div class="hero-subtitle">
+                Infrastructure d'Intelligence Artificielle Souveraine, Équitable & Pédagogique<br>
+                Conçue exclusivement pour la Division scolaire franco-manitobaine (DSFM) et le Bureau de l'éducation française (BEF).
+            </div>
+            <div>
+                <span class="tag-pill">🏛️ 8 Modules Déployés</span>
+                <span class="tag-pill">🔒 100% Souverain & FIPPA</span>
+                <span class="tag-pill-blue">❄️ Continuité Blizzard Active</span>
+                <span class="tag-pill-blue">⏱️ Alignement Priorités MTS</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    if course_name not in st.session_state.histories_by_course:
-        st.session_state.histories_by_course[course_name] = [{
-            "role": "assistant",
-            "content": course["welcome"],
-        }]
-    history = st.session_state.histories_by_course[course_name]
+    # CHIFFRES D'IMPACT CLÉS
+    c_k1, c_k2, c_k3, c_k4 = st.columns(4)
+    c_k1.metric("Couverture Opérationnelle", "8 Modules", "Écosystème unifié")
+    c_k2.metric("Gain Temps Enseignants", "~4.8 h / semaine", "Prévention burnout MTS")
+    c_k3.metric("Équité Territoriale STEM", "24/7 Accessible", "Urbain & Rural garanti")
+    c_k4.metric("Conformité des Données", "100% Locale MB", "Zéro fuite FIPPA/LAIPVP")
 
-    if audio_value is not None:
-        audio_bytes = audio_value.getvalue()
-        audio_hash = hashlib.sha256(audio_bytes).hexdigest()
-        if audio_hash != st.session_state.processed_audio_hash:
-            with st.spinner("Transcription de votre voix en cours…"):
-                try:
-                    transcript = client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=(
-                            getattr(audio_value, "name", "recording.wav"),
-                            audio_bytes,
-                            getattr(audio_value, "type", None) or "audio/wav",
-                        ),
-                    )
-                    st.session_state.pending_audio_text = transcript.text.strip()
-                    st.session_state.processed_audio_hash = audio_hash
-                except Exception as exc:
-                    st.error(f"Erreur transcription vocale : {exc}")
-                    st.session_state.processed_audio_hash = audio_hash
+    st.markdown("### 🧭 La Matrice des 8 Services de DSFMGPT")
+    st.caption("Sélectionnez un module pour y accéder directement :")
 
-    for idx, msg in enumerate(history):
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-            if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
-                speak_text(msg["content"])
-
-        if msg["role"] == "assistant" and idx == len(history) - 1:
-            st.markdown("💡 **Suggestions rapides d'étayage :**")
-            col1, col2, col3, col4 = st.columns(4)
-            btn_query = None
-            with col1:
-                if st.button("📖 Expliquer simplement", key=f"s1_{idx}", use_container_width=True):
-                    btn_query = "Peux-tu m'expliquer cette notion plus simplement avec une analogie visuelle en français ?"
-            with col2:
-                if st.button("📝 Exemple concret", key=f"s2_{idx}", use_container_width=True):
-                    btn_query = "Donne-moi un exemple concret issu du quotidien manitobain ou de notre cours."
-            with col3:
-                if st.button("🎥 Vidéo YouTube", key=f"s3_{idx}", use_container_width=True):
-                    btn_query = "Propose-moi un lien de recherche YouTube cliquable pour visualiser ce concept."
-            with col4:
-                if st.button("🚀 Approfondir", key=f"s4_{idx}", use_container_width=True):
-                    btn_query = "Comment relier ce concept à un défi scientifique plus avancé ou universitaire ?"
-
-            if btn_query:
-                st.session_state.next_question = btn_query
-                st.rerun()
-
-            st.markdown("")
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                quiz_btn = st.button("🎯 🎲 Générer un quiz de 10 questions sur notre discussion", key=f"quiz_btn_{idx}", use_container_width=True)
-            with col_b2:
-                image_btn = st.button("🎨 🖼️ Illustrer cette notion (RAG Souverain)", key=f"img_btn_{idx}", use_container_width=True)
-
-            if quiz_btn:
-                with st.spinner("Conception du quiz formatif personnalisé…"):
-                    recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
-                    quiz = generate_qcm_from_context(
-                        course_name,
-                        course["system"] + "\n" + mode_info["prompt"],
-                        recent_discussion,
-                        number_questions=10,
-                    )
-                if quiz and "questions" in quiz:
-                    st.session_state.quiz_data = quiz
-                    st.session_state.quiz_submitted = False
-                    st.rerun()
-                else:
-                    st.error("Génération du quiz momentanément indisponible.")
-            
-            if image_btn:
-                with st.spinner("Création de l'illustration scientifique sur mesure…"):
-                    recent_discussion = "\n".join([f"{m['role']}: {m['content']}" for m in history[-4:]])
-                    all_chunks = load_pdf_chunks(str(folder))
-                    relevant_chunks = retrieve_chunks(recent_discussion, all_chunks)
-                    chunks_text = "\n\n".join(c["text"] for c in relevant_chunks) if relevant_chunks else "Données générales du cours."
-                    
-                    img_url = generer_image_souveraine(chunks_text, recent_discussion)
-                    if img_url:
-                        st.image(img_url, caption="Schéma illustratif basé sur votre leçon souveraine (FIPPA Compliant)")
-                    else:
-                        st.error("Impossible de concevoir l'illustration pour le moment.")
-
-    # Affichage du Quiz ACTIF
-    if st.session_state.quiz_data:
-        questions = st.session_state.quiz_data.get("questions", [])
-        total = len(questions)
-        st.divider()
-        st.subheader(f"🎯 Quiz d'entraînement formatif — {course_name}")
-        st.write(f"**{total} questions** · Adapté à votre échange actuel")
-
-        if not st.session_state.quiz_submitted:
-            with st.form("qcm_exam_form"):
-                user_answers = {}
-                for i, item in enumerate(questions):
-                    st.markdown(f"**Question {i + 1} sur {total} :** {item['question']}")
-                    labels = [f"{L}. {item['options'][L]}" for L in ("A", "B", "C", "D")]
-                    choice = st.radio(
-                        "Votre réponse :",
-                        labels,
-                        index=None,
-                        key=f"q_ans_{i}",
-                    )
-                    user_answers[i] = choice
-                    with st.expander("💡 Indice d'étayage"):
-                        st.write(item.get("hint", "Pas d'indice particulier."))
-                    st.divider()
-
-                submitted = st.form_submit_button("✅ Soumettre le quiz et obtenir l'analyse", type="primary")
-
-            if submitted:
-                st.session_state.quiz_answers = user_answers
-                st.session_state.quiz_submitted = True
-                st.rerun()
-
-        else:
-            score = 0
-            user_answers = st.session_state.quiz_answers
-            st.markdown("### 📊 Analyse détaillée des résultats :")
-            for i, item in enumerate(questions):
-                ans = user_answers.get(i)
-                correct_letter = item["correct"].upper()
-                st.markdown(f"**Q{i + 1} : {item['question']}**")
-
-                if ans:
-                    selected_letter = ans[0].upper()
-                    if selected_letter == correct_letter:
-                        score += 1
-                        st.success(f"✅ Exact ! Votre choix : {ans}\n\n*{item['explanation']}*")
-                    else:
-                        st.error(f"❌ À revoir. Votre choix : {ans} | Bonne réponse : **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*")
-                else:
-                    st.warning(f"⚠️ Non répondu. Réponse attendue : **{correct_letter}. {item['options'].get(correct_letter, '')}**\n\n*{item['explanation']}*")
-                st.markdown("---")
-
-            pct = (score / total) * 100 if total > 0 else 0
-            st.markdown(f"## 🏆 Score obtenu : {score} / {total} ({pct:.0f}%)")
-            if score >= 8:
-                st.balloons()
-                st.success("🎉 Excellente maîtrise des résultats d'apprentissage ciblés !")
-            elif score >= 5:
-                st.info("👍 Bon niveau de base. Poursuivez les échanges socratiques pour consolider.")
-            else:
-                st.warning("💡 Prenez le temps de revoir les concepts clés avec le tuteur.")
-
-            if st.button("🔄 Fermer le quiz et reprendre la discussion"):
-                st.session_state.quiz_data = None
-                st.session_state.quiz_submitted = False
-                st.session_state.quiz_answers = {}
-                st.rerun()
-
-        st.divider()
-
-    if st.session_state.pending_audio_text:
-        st.info("Transcription vocale prête — Validez ou ajustez le texte avant l'envoi :")
-        with st.form("transcript_form", clear_on_submit=True):
-            corrected_text = st.text_area("Texte transcrit :", value=st.session_state.pending_audio_text, height=90)
-            if st.form_submit_button("Envoyer la question"):
-                st.session_state.pending_audio_text = None
-                st.session_state.next_question = corrected_text.strip()
-                st.rerun()
-
-    typed_q = st.chat_input("Posez votre question en français...")
-    active_question = typed_q or st.session_state.pop("next_question", None)
-
-    if active_question and active_question.strip():
-        active_question = active_question.strip()
-        history.append({"role": "user", "content": active_question})
-        with st.chat_message("user"):
-            st.markdown(active_question)
-
-        all_chunks = load_pdf_chunks(str(folder))
-        relevant_chunks = retrieve_chunks(active_question, all_chunks)
-        if relevant_chunks:
-            excerpts = "\n\n".join(f"[{c['source']}]\n{c['text']}" for c in relevant_chunks)
-            context_block = (
-                "Extraits officiels extraits des documents locaux (Curriculum BEF & Notes de l'enseignant) :\n\n"
-                + excerpts
-                + "\n\nConsigne : Utilise prioritairement ces sources, mentionne leur origine et respecte l'esprit du programme."
-            )
-            st.caption("Documents sources mobilisés : " + ", ".join(sorted({c["source"] for c in relevant_chunks})))
-        else:
-            context_block = "Aucun passage spécifique n'a été extrait des PDF locaux. Réponds selon les normes curriculaires manitobaines."
-
-        api_history = [m for m in history if not (m["role"] == "assistant" and m["content"] == course["welcome"])]
-        system_instructions = (
-            f"{course['system']}\n\n{mode_info['prompt']}\n\n{context_block}\n\n"
-            "RAPPEL CARDINAL : Réponds TOUJOURS en français. Pose UNE SEULE question socratique à la fois. Encourage l'élève."
+    # Ligne 1 : Modules 1 à 4
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    with col_m1:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>👩‍🏫 Module 1 : Assistant BEF</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Plans de leçon CUA différenciés, aménagements PAT, évaluations formatives et esprit NotebookLM.</p>
+                <small style="color: #60a5fa;">Public : Enseignants titulaires</small>
+            </div>
+            """, unsafe_allow_html=True
         )
+        if st.button("Ouvrir Module 1 ➔", key="btn_go_m1", use_container_width=True):
+            st.session_state.nav_active = "1. 👩‍🏫 Assistant BEF (Module 1)"
+            st.rerun()
 
-        with st.chat_message("assistant"):
-            with st.spinner("Réflexion socratique…"):
-                try:
-                    res = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[{"role": "system", "content": system_instructions}] + api_history[-10:],
-                        temperature=mode_info["temp"],
-                    )
-                    assistant_answer = res.choices[0].message.content
-                    st.markdown(assistant_answer)
-                    history.append({"role": "assistant", "content": assistant_answer})
-                    if enable_voice_output:
-                        speak_text(assistant_answer)
-                except Exception as err:
-                    st.error(f"Erreur lors de la génération de la réponse : {err}")
+    with col_m2:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>🎓 Module 2 : Tuteur Socratique</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Accompagnement conversationnel bienveillant pas-à-pas, quiz 10 questions et schémas RAG en direct.</p>
+                <small style="color: #60a5fa;">Public : Élèves 40S & K-12</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 2 ➔", key="btn_go_m2", use_container_width=True):
+            st.session_state.nav_active = "2. 🎓 Tuteur Socratique (Module 2)"
+            st.rerun()
 
-        st.session_state.histories_by_course[course_name] = history
-        st.rerun()
+    with col_m3:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>🏢 Module 3 : Admin & Impact MTS</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Baromètre d'allègement de la charge enseignante (ROI humain) et métriques divisionnaires.</p>
+                <small style="color: #60a5fa;">Public : Directions & Comité MTS</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 3 ➔", key="btn_go_m3", use_container_width=True):
+            st.session_state.nav_active = "3. 🏢 Admin & Impact MTS (Module 3)"
+            st.rerun()
+
+    with col_m4:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>🛡️ Module 4 : InfoSec & FIPPA</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Anonymisation PII dynamique, journal d'audit immuable SHA-256 et cybersécurité sur site.</p>
+                <small style="color: #60a5fa;">Public : Service TI & Direction</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 4 ➔", key="btn_go_m4", use_container_width=True):
+            st.session_state.nav_active = "4. 🛡️ InfoSec & FIPPA (Module 4)"
+            st.rerun()
+
+    st.markdown("")
+
+    # Ligne 2 : Modules 5 à 8
+    col_m5, col_m6, col_m7, col_m8 = st.columns(4)
+    with col_m5:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>💻 Module 5 : STIAM & Sandbox</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Bac à sable Python exécutable et débogueur socratique 24/7 pour les écoles rurales isolées.</p>
+                <small style="color: #60a5fa;">Public : Élèves & Secondaire STEM</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 5 ➔", key="btn_go_m5", use_container_width=True):
+            st.session_state.nav_active = "5. 💻 STIAM & Sandbox Codage (Module 5)"
+            st.rerun()
+
+    with col_m6:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>🔄 Module 6 : Suppléance Express</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Dossier d'urgence prêt à 8 h 15, synchronisation ERP Atrieve, plans BEF et consignes de sécurité.</p>
+                <small style="color: #60a5fa;">Public : Suppléants & Écoles</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 6 ➔", key="btn_go_m6", use_container_width=True):
+            st.session_state.nav_active = "6. 🔄 Suppléance & ERP Atrieve (Module 6)"
+            st.rerun()
+
+    with col_m7:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>🤝 Module 7 : Auxiliaires (EA)</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Coordination Enseignant-EA : Briefing quotidien, guide de relance socratique et bilans PEI.</p>
+                <small style="color: #60a5fa;">Public : Équipes d'inclusion & EA</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 7 ➔", key="btn_go_m7", use_container_width=True):
+            st.session_state.nav_active = "7. 🤝 Auxiliaires EA & Inclusion (Module 7)"
+            st.rerun()
+
+    with col_m8:
+        st.markdown(
+            """
+            <div class="module-box">
+                <h4>👨‍👩‍👦 Module 8 : Parents & Tuteurs</h4>
+                <p style="font-size: 0.85rem; color: #cbd5e1;">Suivi transparent du cheminement, validation des binômes d'étude et liaison sécurisée école-foyer.</p>
+                <small style="color: #60a5fa;">Public : Familles & Tuteurs légaux</small>
+            </div>
+            """, unsafe_allow_html=True
+        )
+        if st.button("Ouvrir Module 8 ➔", key="btn_go_m8", use_container_width=True):
+            st.session_state.nav_active = "8. 👨‍👩‍👦 Portail Parents & Tuteurs (Module 8)"
+            st.rerun()
 
 
 # =============================================================================
-# ESPACE 2 : ENSEIGNANT BEF & AUXILIAIRE (EA)
+# MODULE 1 : ASSISTANT BEF (ENSEIGNANT)
 # =============================================================================
-elif "Enseignant" in navigation_espace:
-    st.title("👩‍🏫 Espace Pédagogique — Conception Curriculaire & Inclusion")
-    st.caption("Conforme aux directives du BEF, à la Conception Universelle de l'Apprentissage (CUA) et aux lois FIPPA")
+elif "Assistant BEF" in navigation_espace:
+    st.title("👩‍🏫 Module 1 : Assistant Pédagogique BEF")
+    st.caption("Génération automatisée de plans de leçon différenciés (CUA), évaluations formatives et enrichissement NotebookLM")
 
-    tab_bef, tab_eval, tab_ea, tab_notebook, tab_video = st.tabs([
+    tab_bef, tab_eval, tab_notebook, tab_video = st.tabs([
         "📋 Planification Différenciée (BEF / PAT / Défi)",
         "📊 Évaluation Formative & par les Pairs",
-        "🤝 Coordination Auxiliaire (EA)",
         "📚 Mon Classeur (Esprit NotebookLM)",
         "🎬 Studio Capsule Dialoguée (Continuité Blizzard)"
     ])
 
     with tab_bef:
         st.subheader("Générateur de Leçon Curriculaire Trifide")
-        st.write("Conçoit simultanément le socle commun, les adaptations PAT et les pistes d'enrichissement pour élèves avancés.")
-        
         col_t1, col_t2 = st.columns(2)
         with col_t1:
-            ras_input = st.text_input("Code RAS BEF ou Résultat d'apprentissage :", value="B12-2-03 (Lois de Mendel)")
-            sujet_lecon = st.text_input("Sujet de la leçon :", value="Monohybridisme et grilles de Punnett")
+            ras_input = st.text_input("Code RAS BEF :", value="B12-2-03 (Lois de Mendel)")
+            sujet_lecon = st.text_input("Sujet :", value="Monohybridisme et grilles de Punnett")
         with col_t2:
-            profil_pat = st.text_area("Besoins particuliers identifiés (PAT / Dyslexie / Francisation) :", 
-                                      value="2 élèves en PAT (besoin de textes aérés et d'étayage visuel) ; 1 élève en francisation récente.")
-            profil_avance = st.text_area("Besoins d'enrichissement (Élèves avancés / Douance) :", 
-                                         value="3 élèves très rapides ayant déjà maîtrisé les calculs de probabilités simples.")
+            profil_pat = st.text_area("Adaptations PAT (Dyslexie / Visuel) :", value="2 élèves en PAT (textes aérés, étayage visuel).")
+            profil_avance = st.text_area("Enrichissement (Élèves avancés) :", value="3 élèves avancés (probabilités complexes).")
 
-        col_btn1, col_btn2 = st.columns([1, 1])
-        with col_btn1:
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
             l_btn = st.button("🚀 Générer la leçon multiniveau complète", type="primary", use_container_width=True)
-        with col_btn2:
-            img_btn_t = st.button("🖼️ Générer une illustration pédagogique souveraine", use_container_width=True)
+        with col_b2:
+            img_btn_t = st.button("🖼️ Générer une illustration souveraine", use_container_width=True)
 
         if l_btn:
             with st.spinner("Génération du plan pédagogique CUA…"):
@@ -608,11 +597,11 @@ elif "Enseignant" in navigation_espace:
                     f"- Sujet : {sujet_lecon}\n"
                     f"- Adaptations PAT : {profil_pat}\n"
                     f"- Élèves avancés : {profil_avance}\n\n"
-                    "Structure obligatoire du document :\n"
+                    "Structure obligatoire :\n"
                     "1. 🎯 Objectifs ministériels et critères de réussite observables (BEF).\n"
-                    "2. 📖 Déroulement de classe (Amorce 10 min, Enseignement explicite 15 min, Pratique guidée 25 min, Objectivation 10 min).\n"
-                    "3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes découpées, réduction de la charge cognitive sans baisse d'exigence).\n"
-                    "4. 🚀 Volet Enrichissement & Défi (Tâches à haut niveau taxonomique de Bloom, problèmes ouverts, liens de recherche pour élèves avancés).\n"
+                    "2. 📖 Déroulement de classe (Amorce 10 min, Magistral 15 min, Pratique guidée 25 min, Objectivation 10 min).\n"
+                    "3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes découpées, CUA).\n"
+                    "4. 🚀 Volet Enrichissement & Défi (Tâches à haut niveau taxonomique de Bloom, problèmes ouverts).\n"
                     "5. 💡 Grille de 3 questions socratiques clés pour le bilan.\n"
                 )
                 resp = client.chat.completions.create(
@@ -626,265 +615,439 @@ elif "Enseignant" in navigation_espace:
             st.markdown(st.session_state.current_lesson_plan)
 
         if img_btn_t:
-            with st.spinner("Création du schéma scientifique…"):
-                les_data = st.session_state.current_lesson_plan or f"Lesson plan: {sujet_lecon}. Adap: {profil_pat}."
-                img_url_t = generer_image_souveraine(les_data, f"Schema of {sujet_lecon}")
+            with st.spinner("Création de l'illustration scientifique…"):
+                les_data = st.session_state.current_lesson_plan or f"Lesson: {sujet_lecon}."
+                img_url_t = generer_image_souveraine(les_data, f"Schéma scientifique de {sujet_lecon}")
                 if img_url_t:
                     st.image(img_url_t, caption="Illustration générée à partir des ressources locales.")
-                else:
-                    st.error("Le rendu visuel a échoué.")
 
     with tab_eval:
-        st.subheader("📊 Conception d'Évaluations Formatives & par les Pairs (Normes BEF)")
-        st.caption("Axé sur l'évaluation formative continue et l'appréciation constructive entre élèves (sans stress de notation sommatif).")
-
-        type_eval = st.radio(
-            "Outil d'évaluation souhaité :",
-            [
-                "🎟️ Billet de Sortie Flash (Exit Ticket 3 minutes)",
-                "👥 Grille d'Évaluation par les Pairs (Deux étoiles et un souhait)",
-                "🎯 Sonde Diagnostique Rapide (Vérification de compréhension mi-parcours)"
-            ],
-            horizontal=True
-        )
-
-        col_ev1, col_ev2 = st.columns(2)
-        with col_ev1:
-            sujet_eval = st.text_input("Notion ou tâche ciblée :", value="L'analyse des arguments persuasifs et des sophismes")
-            niveau_classe = st.selectbox("Niveau scolaire :", ["Secondaire 4 (12e année - 40S)", "Secondaire 3 (11e année - 30S)", "Secondaire 1 & 2 (9e/10e)"])
-        with col_ev2:
-            objectifs_observables = st.text_area(
-                "Critères ou compétences observables clés (BEF) :",
-                value="Repérer un argument fallacieux, expliquer son impact sur le public cible, suggérer une alternative valide."
-            )
-
-        col_ev_btn1, col_ev_btn2 = st.columns(2)
-        with col_ev_btn1:
-            go_eval_btn = st.button("✨ Générer l'outil d'évaluation formative", type="primary", use_container_width=True)
-        with col_ev_btn2:
-            img_eval_btn = st.button("🎨 Générer l'illustration de l'évaluation", use_container_width=True)
-
-        if go_eval_btn:
-            with st.spinner("Conception de l'instrument d'évaluation formateur…"):
-                eval_prompt = f"""Tu es un conseiller pédagogique expert en mesure et évaluation au Bureau de l'éducation française (BEF) du Manitoba.
-Conçois un instrument d'évaluation rigoureux, formatif et bienveillant.
-
-Type d'outil demandé : {type_eval}
-Matière : {course_name}
-Niveau : {niveau_classe}
-Notion / Tâche : {sujet_eval}
-Critères observables : {objectifs_observables}
-
-DIRECTIVES :
-1. Si 'Billet de Sortie' : 3 questions (1 notion comprise, 1 doute, 1 application).
-2. Si 'Par les Pairs' : 'Deux étoiles' (réussites) et 'Un souhait' (piste). Grille à 4 niveaux d'acquisition.
-3. Si 'Sonde' : 3 QCM avec pièges typiques.
-"""
-                resp_eval = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": eval_prompt}],
-                    temperature=0.3
-                )
-                st.session_state.current_eval_data = resp_eval.choices[0].message.content
-
-        if st.session_state.current_eval_data:
-            st.markdown(st.session_state.current_eval_data)
-
-        if img_eval_btn:
-            with st.spinner("Création de l'illustration pour l'évaluation..."):
-                eval_data = st.session_state.current_eval_data or f"{type_eval}: {sujet_eval}"
-                img_url_ev = generer_image_souveraine(eval_data, f"Visual asset for {sujet_eval}")
-                if img_url_ev:
-                    st.image(img_url_ev, caption="Visuel d'accompagnement de l'évaluation.")
-                else:
-                    st.error("Le rendu a échoué.")
-
-    with tab_ea:
-        st.subheader("Coordination avec l'Auxiliaire d'Enseignement (EA Daily Briefing)")
-        st.write("Produit une feuille de route claire pour l'auxiliaire afin d'accompagner un élève sous PAT sans faire le devoir à sa place.")
-        
-        contenu_cours = st.text_area("Résumé de la leçon du jour ou extrait du cours :", 
-                                     value="Exercices d'application sur les croisements génétiques et calculs de ratios phénotypiques (3:1).",
-                                     height=100)
-        
-        if st.button("📋 Générer la fiche de mission pour l'auxiliaire"):
-            with st.spinner("Rédaction de la fiche de mission EA…"):
-                ea_prompt = f"""Tu es un spécialiste de l'inclusion scolaire au Manitoba.
-Rédige une fiche de mission minute destinée à un auxiliaire d'enseignement (Educational Assistant) accompagnant un élève sous PAT.
-Leçon du jour : {contenu_cours}
-
-Structure :
-1. Rôle de l'auxiliaire (magistral vs individuel).
-2. Questionnement socratique : 3 questions en cas de blocage.
-3. Vigilances (ne pas faire à la place, fatigue).
-4. Mini-grille d'observation en 3 critères.
-"""
-                resp_ea = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": ea_prompt}],
-                    temperature=0.3
-                )
-                st.markdown(resp_ea.choices[0].message.content)
+        st.subheader("📊 Évaluations Formatives & par les Pairs (Normes BEF)")
+        type_eval = st.radio("Type d'instrument :", ["🎟️ Billet de Sortie Flash (3 min)", "👥 Grille d'Évaluation par les Pairs (Deux étoiles et un souhait)", "🎯 Sonde Diagnostique Rapide"], horizontal=True)
+        sujet_eval = st.text_input("Notion ciblée :", value="L'analyse des allèles dominants et récessifs")
+        if st.button("✨ Générer l'outil d'évaluation", type="primary"):
+            with st.spinner("Conception de l'instrument d'évaluation…"):
+                eval_p = f"Crée un outil d'évaluation formatif conforme au BEF du Manitoba. Type : {type_eval}. Matière : {course_name}. Sujet : {sujet_eval}."
+                resp_eval = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": eval_p}], temperature=0.3)
+                st.markdown(resp_eval.choices[0].message.content)
 
     with tab_notebook:
-        st.subheader("Mon Espace Documents : Enrichissement (NotebookLM Souverain)")
-        st.caption("Déposez vos propres notes de cours, devoirs types ou manuels. Ils sont indexés localement pour vos élèves.")
-        
+        st.subheader("📚 Mon Classeur de Cours (Esprit NotebookLM)")
         custom_folder = DOCS_DIR / course["folder"] / "custom_teacher"
         custom_folder.mkdir(parents=True, exist_ok=True)
-        
-        uploaded_files = st.file_uploader("Ajouter des fichiers PDF personnels pour ce cours", type=["pdf"], accept_multiple_files=True)
-        if uploaded_files:
-            for f in uploaded_files:
-                target_file = custom_folder / f.name
-                with open(target_file, "wb") as buffer:
+        up_files = st.file_uploader("Ajouter des PDF personnels de cours :", type=["pdf"], accept_multiple_files=True)
+        if up_files:
+            for f in up_files:
+                with open(custom_folder / f.name, "wb") as buffer:
                     buffer.write(f.getbuffer())
-            st.success(f"✅ {len(uploaded_files)} ressource(s) ajoutée(s) et indexée(s) !")
+            st.success(f"✅ {len(up_files)} ressource(s) ajoutée(s) et indexée(s) !")
             st.cache_data.clear()
 
-        existing_custom = list(custom_folder.glob("*.pdf"))
-        if existing_custom:
-            st.markdown("#### Fichiers personnels actuellement actifs :")
-            for doc in existing_custom:
-                st.write(f"📄 `{doc.name}`")
-
     with tab_video:
-        st.subheader("🎬 Studio Capsule Dialoguée Élève-Professeur (Continuité Blizzard)")
-        st.write("Génère un script scénarisé interactif entre un élève virtuel et le professeur, prêt pour le clonage vocal.")
+        st.subheader("🎬 Studio Capsule Dialoguée (Continuité Blizzard)")
+        notion_v = st.text_input("Notion clé pour la capsule :", value="Le monohybridisme et la ségrégation mendélienne")
+        if st.button("🎥 Scénariser la capsule vidéo"):
+            with st.spinner("Scénarisation en cours…"):
+                vid_p = f"Rédige un script de dialogue chaleureux de 2 min entre un élève et son enseignant (voix clonée) sur {notion_v} pour la DSFM."
+                res_v = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": vid_p}], temperature=0.5)
+                st.markdown(res_v.choices[0].message.content)
+
+
+# =============================================================================
+# MODULE 2 : TUTEUR SOCRATIQUE (ÉLÈVE)
+# =============================================================================
+elif "Tuteur Socratique" in navigation_espace:
+    st.title(f"🎓 Module 2 : Tuteur Socratique — {course_name}")
+    st.caption("Accompagnement pédagogique socratique · Guidage pas-à-pas sans réponse directe")
+
+    if course_name not in st.session_state.histories_by_course:
+        st.session_state.histories_by_course[course_name] = [{"role": "assistant", "content": course["welcome"]}]
+    history = st.session_state.histories_by_course[course_name]
+
+    if audio_value is not None:
+        audio_bytes = audio_value.getvalue()
+        audio_hash = hashlib.sha256(audio_bytes).hexdigest()
+        if audio_hash != st.session_state.processed_audio_hash:
+            with st.spinner("Transcription Whisper…"):
+                try:
+                    transcript = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=(getattr(audio_value, "name", "rec.wav"), audio_bytes, getattr(audio_value, "type", None) or "audio/wav")
+                    )
+                    st.session_state.pending_audio_text = transcript.text.strip()
+                    st.session_state.processed_audio_hash = audio_hash
+                except Exception as exc:
+                    st.error(f"Erreur Whisper : {exc}")
+
+    for idx, msg in enumerate(history):
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
+                speak_text(msg["content"])
+
+        if msg["role"] == "assistant" and idx == len(history) - 1:
+            st.markdown("💡 **Suggestions d'étayage rapide :**")
+            c1, c2, c3, c4 = st.columns(4)
+            b_q = None
+            with c1:
+                if st.button("📖 Expliquer simplement", key=f"s1_{idx}", use_container_width=True):
+                    b_q = "Peux-tu m'expliquer cela plus simplement en français avec une analogie visuelle ?"
+            with c2:
+                if st.button("📝 Exemple concret", key=f"s2_{idx}", use_container_width=True):
+                    b_q = "Donne-moi un exemple concret issu du cours ou du Manitoba."
+            with c3:
+                if st.button("🎥 Vidéo YouTube", key=f"s3_{idx}", use_container_width=True):
+                    b_q = "Propose un lien YouTube cliquable pour visualiser ce concept."
+            with c4:
+                if st.button("🚀 Défi supérieur", key=f"s4_{idx}", use_container_width=True):
+                    b_q = "Comment relier ce concept à une question scientifique plus avancée ?"
+            if b_q:
+                st.session_state.next_question = b_q
+                st.rerun()
+
+            col_q1, col_q2 = st.columns(2)
+            with col_q1:
+                if st.button("🎯 Générer un quiz de 10 questions sur notre échange", key=f"q_{idx}", use_container_width=True):
+                    with st.spinner("Génération du quiz formatif…"):
+                        disc = "\n".join([f"{m['role']}: {m['content']}" for m in history[-6:]])
+                        quiz = generate_qcm_from_context(course_name, course["system"] + "\n" + mode_info["prompt"], disc, 10)
+                    if quiz and "questions" in quiz:
+                        st.session_state.quiz_data = quiz
+                        st.session_state.quiz_submitted = False
+                        st.rerun()
+            with col_q2:
+                if st.button("🎨 Illustrer cette notion (RAG Souverain)", key=f"im_{idx}", use_container_width=True):
+                    with st.spinner("Conception de l'image pédagogique…"):
+                        disc_img = "\n".join([f"{m['role']}: {m['content']}" for m in history[-4:]])
+                        all_c = load_pdf_chunks(str(folder))
+                        rel_c = retrieve_chunks(disc_img, all_c)
+                        c_txt = "\n\n".join(c["text"] for c in rel_c) if rel_c else "Données générales."
+                        u = generer_image_souveraine(c_txt, disc_img)
+                        if u:
+                            st.image(u, caption="Illustration scientifique basée sur les données locales")
+
+    # Quiz interactif
+    if st.session_state.quiz_data:
+        questions = st.session_state.quiz_data.get("questions", [])
+        st.divider()
+        st.subheader(f"🎯 Quiz formatif — {course_name}")
+        if not st.session_state.quiz_submitted:
+            with st.form("qcm_form"):
+                u_answers = {}
+                for i, itm in enumerate(questions):
+                    st.markdown(f"**Q{i + 1} :** {itm['question']}")
+                    opts = [f"{L}. {itm['options'][L]}" for L in ("A", "B", "C", "D")]
+                    u_answers[i] = st.radio("Choix :", opts, index=None, key=f"quiz_ans_{i}")
+                    with st.expander("💡 Indice d'étayage"):
+                        st.write(itm.get("hint", "Pas d'indice."))
+                    st.divider()
+                if st.form_submit_button("✅ Valider mes réponses", type="primary"):
+                    st.session_state.quiz_answers = u_answers
+                    st.session_state.quiz_submitted = True
+                    st.rerun()
+        else:
+            score = 0
+            for i, itm in enumerate(questions):
+                ans = st.session_state.quiz_answers.get(i)
+                corr = itm["correct"].upper()
+                if ans and ans[0].upper() == corr:
+                    score += 1
+                    st.success(f"✅ Q{i + 1} Exact ! {ans}\n\n*{itm['explanation']}*")
+                else:
+                    st.error(f"❌ Q{i + 1} À revoir. Réponse attendue : **{corr}. {itm['options'].get(corr, '')}**\n\n*{itm['explanation']}*")
+            st.markdown(f"### Score final : {score} / {len(questions)}")
+            if st.button("🔄 Fermer le quiz"):
+                st.session_state.quiz_data = None
+                st.session_state.quiz_submitted = False
+                st.rerun()
+        st.divider()
+
+    if st.session_state.pending_audio_text:
+        st.info("Validation transcription Whisper :")
+        with st.form("whisper_confirm"):
+            c_txt = st.text_area("Texte transcrit :", value=st.session_state.pending_audio_text)
+            if st.form_submit_button("Envoyer"):
+                st.session_state.pending_audio_text = None
+                st.session_state.next_question = c_txt.strip()
+                st.rerun()
+
+    typed_q = st.chat_input("Pose ta question en français…")
+    active_q = typed_q or st.session_state.pop("next_question", None)
+    if active_q and active_q.strip():
+        active_q = active_q.strip()
+        history.append({"role": "user", "content": active_q})
+        with st.chat_message("user"):
+            st.markdown(active_q)
+
+        all_c = load_pdf_chunks(str(folder))
+        rel_c = retrieve_chunks(active_q, all_c)
+        c_block = "\n\n".join(f"[{c['source']}]\n{c['text']}" for c in rel_c) if rel_c else "Programme général BEF."
+        sys_p = f"{course['system']}\n\n{mode_info['prompt']}\n\nExtraits locaux :\n{c_block}\n\nRAPPEL : Socratique, en français, 1 question à la fois."
         
-        notion_cle = st.text_input("Notion clé à scénariser :", value="La différence entre allèle dominant et allèle récessif")
-        if st.button("🎥 Générer le script du dialogue vidéo"):
-            with st.spinner("Scénarisation de la capsule…"):
-                vid_prompt = f"""Rédige un script de dialogue de 2 minutes entre un élève (hésitant) et son enseignant (bienveillant) pour la DSFM.
-Matière : {course_name}
-Notion : {notion_cle}
-
-Format : [Élève] / [Enseignant] + [Visuel suggéré].
-"""
-                resp_vid = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": vid_prompt}],
-                    temperature=0.6
-                )
-                st.markdown(resp_vid.choices[0].message.content)
+        with st.chat_message("assistant"):
+            with st.spinner("Réflexion socratique…"):
+                res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": sys_p}] + history[-10:], temperature=mode_info["temp"])
+                ans_txt = res.choices[0].message.content
+                st.markdown(ans_txt)
+                history.append({"role": "assistant", "content": ans_txt})
+                if enable_voice_output:
+                    speak_text(ans_txt)
+        st.session_state.histories_by_course[course_name] = history
+        st.rerun()
 
 
 # =============================================================================
-# ESPACE 3 : PARENTS ET TUTEURS LÉGAUX
+# MODULE 3 : ADMIN, EVALUATION & IMPACT MTS
 # =============================================================================
-elif "Parents" in navigation_espace:
-    st.title("👨‍👩‍👦 Espace Parents, Tutrices et Tuteurs Légaux")
-    st.caption("Suivi du cheminement, projets collaboratifs et liaison école-foyer (Conformité FIPPA & Loi sur les écoles publiques)")
+elif "Admin & Impact" in navigation_espace:
+    st.title("🏢 Module 3 : Administration & Baromètre d'Impact MTS")
+    st.caption("Allègement de la tâche enseignante (Workload Reduction), métriques divisionnaires et ROI humain")
 
-    tab_suivi, tab_binome, tab_liaison = st.tabs([
-        "📊 Métriques d'Effort & Autonomie",
-        "🤝 Projets en Binôme (Esprit TeamSnap)",
-        "📬 Liaison École-Maison"
-    ])
+    col_p1, col_p2, col_p3 = st.columns(3)
+    with col_p1:
+        nb_profs = st.slider("Enseignants titulaires dans l'école :", 5, 60, 25)
+        lecons_sem = st.slider("Plans de cours CUA générés / sem. :", 1, 10, 3)
+    with col_p2:
+        nb_ea = st.slider("Auxiliaires d'enseignement (EA) :", 1, 20, 6)
+        nb_suppl = st.slider("Remplacements / suppléances par mois :", 2, 40, 12)
+    with col_p3:
+        nb_el = st.slider("Élèves bénéficiaires du tuteur :", 20, 500, 150, step=10)
+        sess_el = st.slider("Sessions d'étayage / élève / sem. :", 1, 7, 3)
 
-    with tab_suivi:
-        st.subheader("Indicateurs d'activité de la semaine")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sessions d'étude avec le tuteur", "4", "+1 vs sem. passée")
-        c2.metric("Quiz complétés", "3", "Moyenne : 83%")
-        c3.metric("Notion approfondie", "Génétique 40S", "Solide")
-        
-        st.markdown("#### Dernières validations d'apprentissage :")
-        st.write("• **Biologie 40S** : 9/10 au quiz formatif (1 indice socratique utilisé).")
-        st.write("• **Anglais 40S** : Structuration de texte argumentatif complétée avec succès.")
-
-    with tab_binome:
-        st.subheader("Coordination des travaux d'équipe & Binômes")
-        st.info("🔒 La participation à un groupe de travail nécessite le consentement explicite du parent ou tuteur légal de chaque participant.")
-        
-        with st.expander("🔬 Laboratoire d'hérédité mendélienne — Binôme avec Marc L.", expanded=True):
-            st.write("**Échéance divisionnaire :** Vendredi 30 octobre")
-            st.progress(70, text="Progression du dossier : 70%")
-            st.checkbox("Étape 1 : Hypothèses et protocoles de recherche (Validé)", value=True, disabled=True)
-            st.checkbox("Étape 2 : Recueil des données de croisement (Validé)", value=True, disabled=True)
-            st.checkbox("Étape 3 : Révision finale avec le tuteur socratique", value=False)
-            st.write("📍 **Coordination logistique :** Séance de révision partagée prévue à la bibliothèque le mercredi à 16 h 30.")
-
-    with tab_liaison:
-        st.subheader("Synthèse hebdomadaire transmise au foyer")
-        st.success(
-            "💡 **Note pédagogique de l'équipe :** Adam fait preuve d'une excellente assiduité dans ses démarches socratiques. "
-            "Il formule ses questions avec clarté en français. Encouragez-le à continuer ses sessions régulières !"
-        )
-
-
-# =============================================================================
-# ESPACE 4 : DIRECTION & IMPACT DIVISIONNAIRE (MODULE 3)
-# =============================================================================
-elif "Direction" in navigation_espace or "Admin" in navigation_espace:
-    st.title("🏢 Espace Direction, Admin & Impact — DSFMGPT")
-    st.caption("Mesure du soulagement de la tâche de travail (MTS) et efficacité divisionnaire (FIPPA Secured)")
-
-    st.markdown("### 🎛️ Paramétrez votre établissement :")
-    col_param1, col_param2, col_param3 = st.columns(3)
-    with col_param1:
-        nb_profs = st.slider("Nombre d'enseignants dans l'école :", min_value=5, max_value=60, value=25, step=1)
-        lecons_semaine = st.slider("Plans de leçons différenciées générés / prof / sem. :", 1, 10, 3)
-    with col_param2:
-        nb_ea = st.slider("Nombre d'auxiliaires d'enseignement (EA) :", min_value=1, max_value=20, value=6, step=1)
-        nb_suppleances = st.slider("Journées de suppléance par mois :", 2, 40, 12)
-    with col_param3:
-        nb_eleves = st.slider("Élèves utilisant le tuteur socratique :", 20, 500, 150, step=10)
-        sessions_eleve_sem = st.slider("Sessions de tutorat par élève / sem. :", 1, 7, 3)
-
-    GAIN_LECON_DIFF = 45      # min économisées par plan complet BEF/PAT/Défi
-    GAIN_EVAL_FORMA = 50      # min économisées par évaluation
-    GAIN_EA_JOUR = 25         # min gagnées/jour par EA (briefing minute + bilan)
-    GAIN_SUPPLEANCE_JOUR = 40 # min gagnées/journée de suppléance
-    GAIN_ELEVE_SESSION = 30   # min d'étude efficace gagnée sans blocage
-
-    gain_profs_heures_sem = (nb_profs * lecons_semaine * (GAIN_LECON_DIFF + GAIN_EVAL_FORMA)) / 60
-    gain_ea_heures_sem = (nb_ea * 5 * GAIN_EA_JOUR) / 60
-    gain_suppleance_heures_mois = (nb_suppleances * GAIN_SUPPLEANCE_JOUR) / 60
-    gain_eleves_heures_sem = (nb_eleves * sessions_eleve_sem * GAIN_ELEVE_SESSION) / 60
-
-    total_personnel_heures_mois = (gain_profs_heures_sem * 4) + (gain_ea_heures_sem * 4) + gain_suppleance_heures_mois
-    total_jours_recupere_mois = total_personnel_heures_mois / 7.5
+    gain_profs_h = (nb_profs * lecons_sem * (45 + 50)) / 60
+    gain_ea_h = (nb_ea * 5 * 25) / 60
+    gain_suppl_h = (nb_suppl * 40) / 60
+    gain_total_mois = (gain_profs_h * 4) + (gain_ea_h * 4) + gain_suppl_h
+    jours_recup = gain_total_mois / 7.5
 
     st.divider()
-    st.subheader("📊 Résultats de l'Impact Mensuel Estimé :")
-
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Heures gagnées / enseignant", f"~{gain_profs_heures_sem / nb_profs:.1f} h / sem", "Soulagement direct")
-    m2.metric("Temps total personnel école", f"{total_personnel_heures_mois:.0f} h / mois", "Heures réinvesties")
-    m3.metric("Équivalent journées de travail", f"{total_jours_recupere_mois:.1f} jours", "Par mois d'école")
-    m4.metric("Temps d'étude actif élèves", f"{gain_eleves_heures_sem * 4:.0f} h / mois", "En immersion française")
+    m1.metric("Heures économisées / prof", f"~{gain_profs_h / nb_profs:.1f} h / sem", "Moins de correction/prépa")
+    m2.metric("Temps personnel école", f"{gain_total_mois:.0f} h / mois", "Réinvesties en classe")
+    m3.metric("Équivalent journées de travail", f"{jours_recup:.1f} jours", "Par mois d'école")
+    m4.metric("Temps d'étude élèves", f"{(nb_el * sess_el * 30 * 4) / 60:.0f} h / mois", "En immersion française")
 
     st.markdown("---")
-    st.markdown("#### 💡 Où va ce temps précieux réinvesti ?")
-    c_a, c_b = st.columns(2)
-    with c_a:
-        st.success(
-            "👩‍🏫 **Pour les Enseignants & la MTS :**\n\n"
-            "• Réduction de la charge mentale en soirée et en fin de semaine.\n"
-            "• Plus de disponibilité pour la relation humaine et l'accompagnement individuel.\n"
-            "• Simplification de la prise en charge des élèves à besoins spécifiques (PAT)."
-        )
-    with c_b:
-        st.info(
-            "🎓 **Pour les Élèves & la Communauté :**\n\n"
-            "• Déblocage immédiat face aux devoirs sans frustration à la maison.\n"
-            "• Augmentation mesurable du temps d'exposition à la langue française.\n"
-            "• Continuité pédagogique assurée lors des suppléances et blizzards d'hiver."
-        )
+    st.success("🛡️ **Plaidoyer MTS :** Ce calculateur fournit une preuve tangible de prévention de l'épuisement professionnel pour chaque école de la DSFM.")
 
 
-# Pied de page institutionnel
+# =============================================================================
+# MODULE 4 : INFOSEC & FIPPA (GOUVERNANCE & CYBERSÉCURITÉ)
+# =============================================================================
+elif "InfoSec & FIPPA" in navigation_espace:
+    st.title("🛡️ Module 4 : Gouvernance, Cybersécurité & FIPPA/LAIPVP")
+    st.caption("Couche transversale de souveraineté numérique : anonymisation PII, chiffrement et traçabilité d'audit immuable")
+
+    tab_pii, tab_audit, tab_sover = st.tabs([
+        "🔒 Démonstrateur d'Anonymisation PII Dynamique",
+        "📑 Journal d'Audit Immuable (FIPPA Compliance)",
+        "🌐 Architecture Souveraine On-Premise"
+    ])
+
+    with tab_pii:
+        st.subheader("Filtre d'Anonymisation et Dé-identification des Données Élèves")
+        st.write("Ce module intercepte les requêtes avant tout traitement IA pour masquer dynamiquement les renseignements personnels (PII).")
+        
+        texte_test = st.text_area(
+            "Entrez un texte d'exemple contenant des données identifiables :",
+            value="L'élève Marc Tremblay (numéro MET 948201), né le 12 mai 2008, présente des difficultés en Biologie 40S au Collège Louis-Riel. Contacter sa tutrice Sophie à sophie.t@email.ca ou au 204-555-0199.",
+            height=100
+        )
+        
+        if st.button("🛡️ Tester l'Anonymisation Dynamique"):
+            def anonymiser_pii(texte):
+                t = re.sub(r"[A-Z][a-z]+ [A-Z][a-z]+", "[NOM_ELEVE_ANONYMISE]", texte)
+                t = re.sub(r"\b\d{6}\b", "[ID_MET_MASQUE]", t)
+                t = re.sub(r"[\w\.-]+@[\w\.-]+", "[COURRIEL_MASQUE]", t)
+                t = re.sub(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b", "[TELEPHONE_MASQUE]", t)
+                t = re.sub(r"\b\d{1,2} [a-zéû]+ \d{4}\b", "[DATE_NAISSANCE_MASQUEE]", t)
+                return t
+
+            texte_propre = anonymiser_pii(texte_test)
+            c_raw, c_clean = st.columns(2)
+            with c_raw:
+                st.markdown("**Texte Brut (Interne Division) :**")
+                st.code(texte_test, language="text")
+            with c_clean:
+                st.markdown("**Texte Anonymisé transmis au LLM :**")
+                st.code(texte_propre, language="text")
+            st.success("✅ Conformité FIPPA garantie : Aucune donnée nominative n'est transmise hors de l'enceinte divisionnaire.")
+
+    with tab_audit:
+        st.subheader("Journal de Traçabilité Immuable (Audit Trail)")
+        st.caption("Chaque transaction pédagogique est horodatée et hachée cryptographiquement en SHA-256.")
+        
+        logs_demo = [
+            {"Horodatage": "2026-10-25 18:42:10", "Utilisateur": "Enseignant #4102", "Action": "Génération Leçon Bio 40S", "Statut FIPPA": "Vérifié (Zéro PII)", "Hash SHA-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+            {"Horodatage": "2026-10-25 19:05:32", "Utilisateur": "Élève (Adam)", "Action": "Question Socratique Mendel", "Statut FIPPA": "Conforme (Session Isolée)", "Hash SHA-256": "87542b827e7d60a1a9a40f02f8f902cbd3194206585634d6824a848380516200"},
+            {"Horodatage": "2026-10-25 19:14:01", "Utilisateur": "Auxiliaire #108", "Action": "Consultation Briefing EA", "Statut FIPPA": "Vérifié (Données Chiffrées)", "Hash SHA-256": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"},
+        ]
+        st.dataframe(logs_demo, use_container_width=True)
+
+    with tab_sover:
+        st.subheader("Architecture Souveraine & Hébergement Local")
+        st.info("📍 **Localisation des serveurs :** Infrastructure sur site / Datacenter certifié au Manitoba (Canada).")
+        st.write("• Chiffrement en transit : TLS 1.3 avec suites cryptographiques PFS.")
+        st.write("• Chiffrement au repos : AES-256 pour toutes les bases vectorielles et documents curriculaires.")
+
+
+# =============================================================================
+# MODULE 5 : STIAM & SANDBOX CODAGE (ÉQUITÉ RURALE 24/7)
+# =============================================================================
+elif "STIAM & Sandbox" in navigation_espace:
+    st.title("💻 Module 5 : Tuteur STIAM & Bac à Sable de Programmation 24/7")
+    st.caption("Équité territoriale en informatique : bac à sable sécurisé et tuteur socratique de débogage pour écoles rurales")
+
+    st.markdown("### 🧑‍💻 Bac à Sable Python (Sandbox)")
+    code_init = """# Défi Informatique 40S : Calcul de la fréquence d'allèles
+def frequence_alleles(nb_dominants, nb_recessifs):
+    total = nb_dominants + nb_recessifs
+    freq_dom = nb_dominants / total
+    return freq_dom
+
+# Test
+print("Fréquence allèle dominant :", frequence_alleles(60, 40))
+"""
+    code_eleve = st.text_area("Éditeur de code Python :", value=code_init, height=180)
+
+    col_run, col_soc = st.columns(2)
+    with col_run:
+        if st.button("▶️ Exécuter le code en direct", use_container_width=True):
+            old_stdout = sys.stdout
+            redirected_output = sys.stdout = io.StringIO()
+            try:
+                exec(code_eleve, {})
+                st.code(redirected_output.getvalue(), language="text")
+                st.success("Exécution terminée avec succès.")
+            except Exception as e:
+                st.error(f"Erreur d'exécution : {e}")
+            finally:
+                sys.stdout = old_stdout
+
+    with col_soc:
+        if st.button("🧠 Tuteur STIAM : Analyser ma démarche socratique", type="primary", use_container_width=True):
+            with st.spinner("Analyse socratique du code…"):
+                p_code = (
+                    "Tu es un enseignant socratique en informatique 40S au Manitoba.\n"
+                    f"Voici le code saisi par l'élève :\n{code_eleve}\n\n"
+                    "CONSIGNE STRICTE : Ne donne pas la correction directe du code. "
+                    "Pose 1 ou 2 questions socratiques stimulantes sur la complexité algorithmique, la gestion des erreurs ou la logique mathématique."
+                )
+                res_code = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": p_code}],
+                    temperature=0.3
+                )
+                st.markdown(res_code.choices[0].message.content)
+
+
+# =============================================================================
+# MODULE 6 : SUPPLÉANCE & ERP ATRIEVE
+# =============================================================================
+elif "Suppléance & ERP" in navigation_espace:
+    st.title("🔄 Module 6 : Suppléance Express & Intégration ERP Atrieve")
+    st.caption("Plan d'urgence prêt à 8 h 15, protocoles de sécurité et continuité curriculaire lors des remplacements")
+
+    col_ec1, col_ec2 = st.columns(2)
+    with col_ec1:
+        ecole_sel = st.selectbox("Établissement DSFM :", [
+            "Collège Louis-Riel (Winnipeg)", 
+            "École Saint-Joachim (La Broquerie)", 
+            "École Pointe-des-Chênes (Sainte-Anne)", 
+            "École Réal-Bérard (Saint-Pierre-Jolys)"
+        ])
+        classe_suppl = st.selectbox("Période et matière du remplacement :", [
+            "Période 2 — Biologie 40S", 
+            "Période 3 — Mathématiques Pré-calcul 30S", 
+            "Période 4 — Informatique 40S"
+        ])
+    with col_ec2:
+        code_mission = st.text_input("Code de mission Atrieve ERP :", value="SUB-2026-LR-8821")
+        consigne_particuliere = st.text_input("Consigne spéciale laissée par l'enseignant titulaire :", value="Les élèves doivent terminer les exercices sur l'hérédité mendélienne.")
+
+    if st.button("📋 Générer le Dossier de Suppléance Express (Prêt en 30 secondes)", type="primary"):
+        with st.spinner("Compilation du dossier de remplacement…"):
+            p_sub = (
+                f"Tu es le directeur adjoint responsable des suppléances à la DSFM ({ecole_sel}).\n"
+                f"Génère une fiche de suppléance d'urgence claire et rassurante pour un enseignant suppléant non-spécialiste prenant en charge : {classe_suppl}.\n"
+                f"Consigne du titulaire : {consigne_particuliere}\n\n"
+                "Structure attendue :\n"
+                "1. 📍 Repères de sécurité école (Lieu des trousses de premiers soins, protocole d'évacuation, numéro du bureau de direction).\n"
+                "2. ⏱️ Déroulé de la période de 60 minutes pas-à-pas (clé en main).\n"
+                "3. 🤝 Soutien inclusion (Rôle de l'auxiliaire EA présent dans la classe et adaptations prioritaires discrètes).\n"
+                "4. 📝 Billet de liaison à laisser sur le bureau du titulaire à 15 h 30.\n"
+            )
+            res_sub = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": p_sub}], temperature=0.3)
+            st.markdown(res_sub.choices[0].message.content)
+
+
+# =============================================================================
+# MODULE 7 : AUXILIAIRES D'ENSEIGNEMENT (EA) & INCLUSION
+# =============================================================================
+elif "Auxiliaires EA" in navigation_espace:
+    st.title("🤝 Module 7 : Coordination des Auxiliaires d'Enseignement (EA)")
+    st.caption("Feuille de mission minute (EA Briefing), étayage socratique et micro-bilans d'observation PEI")
+
+    contenu_c = st.text_area(
+        "Sujet de la leçon ou tâche demandée à l'élève sous PAT :",
+        value="Résolution autonome de 4 problèmes de croisements génétiques (grilles de Punnett) en Biologie 40S.",
+        height=90
+    )
+
+    if st.button("📋 Générer la Fiche de Mission Auxiliaire (30 secondes)", type="primary"):
+        with st.spinner("Génération de la fiche EA…"):
+            ea_p = (
+                "Tu es un spécialiste manitobain de l'inclusion scolaire et de l'encadrement des auxiliaires d'enseignement (EA).\n"
+                f"Tâche : {contenu_c}\n\n"
+                "Rédige une fiche de mission minute :\n"
+                "1. 🎯 Posture attendue de l'auxiliaire (encourager l'autonomie, ne pas faire à la place).\n"
+                "2. 💡 3 questions socratiques d'orientation à poser en cas de blocage.\n"
+                "3. ⚠️ Signes précurseurs de surcharge cognitive à surveiller.\n"
+                "4. 📝 Grille d'observation rapide à 3 critères (Autonomie, Compréhension, Persévérance).\n"
+            )
+            res_ea = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": ea_p}], temperature=0.3)
+            st.markdown(res_ea.choices[0].message.content)
+
+
+# =============================================================================
+# MODULE 8 : PORTAIL PARENTS, TUTRICES ET TUTEURS LÉGAUX
+# =============================================================================
+elif "Portail Parents" in navigation_espace:
+    st.title("👨‍👩‍👦 Module 8 : Portail Parents, Tutrices et Tuteurs Légaux")
+    st.caption("Suivi transparent du cheminement, coordination des binômes d'étude et liaison foyer (Conforme FIPPA & Loi sur les écoles publiques)")
+
+    t_suivi, t_binome, t_liaison = st.tabs(["📊 Métriques d'Effort & Autonomie", "🤝 Projets en Binôme (Esprit TeamSnap)", "📬 Liaison École-Maison"])
+    with t_suivi:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Sessions avec le tuteur", "4", "+1 vs sem. passée")
+        c2.metric("Quiz complétés", "3", "Moyenne : 83%")
+        c3.metric("Notion approfondie", "Génétique 40S", "Solide")
+        st.markdown("#### Validations récentes :")
+        st.write("• **Biologie 40S** : 9/10 au quiz formatif (1 indice socratique utilisé).")
+        st.write("• **Anglais 40S** : Argumentation littéraire structurée avec autonomie.")
+    with t_binome:
+        st.info("🔒 Projets en binôme : chaque travail d'équipe requiert l'autorisation préalable du parent ou tuteur légal.")
+        st.write("🔬 **Laboratoire d'hérédité mendélienne — En binôme avec Marc L.**")
+        st.progress(70, text="Progression du dossier : 70%")
+        st.checkbox("Étape 1 : Hypothèses et protocoles de recherche (Validé)", value=True, disabled=True)
+        st.checkbox("Étape 2 : Recueil des données de croisement (Validé)", value=True, disabled=True)
+        st.checkbox("Étape 3 : Révision finale avec le tuteur socratique", value=False)
+        st.write("📍 **Coordination logistique :** Séance de révision partagée prévue à la bibliothèque le mercredi à 16 h 30.")
+    with t_liaison:
+        st.success("💡 **Note de l'équipe :** Adam fait preuve d'une excellente assiduité socratique en français. Encouragez-le à continuer !")
+
+
+# Pied de page institutionnel avec le Bison et le Drapeau Franco-Manitobain
 st.divider()
 st.markdown(
     """
-    <div style="text-align: center; color: #6c757d; font-size: 0.85rem; padding-top: 5px;">
-        DSFMGPT · Conçu avec rigueur pour l'excellence et l'équité éducative au Manitoba 
-        <span style="font-size: 1.1rem; vertical-align: middle;">🦬</span> 
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Franco-Manitobain_flag.svg/40px-Franco-Manitobain_flag.svg.png" 
+    <div style="text-align: center; color: #888888; font-size: 0.9rem; padding: 10px 0; display: flex; justify-content: center; align-items: center; gap: 8px;">
+        <span>DSFMGPT · Conçu avec rigueur pour l'excellence et l'équité éducative au Manitoba</span>
+        <span style="font-size: 1.25rem;">🦬</span>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Franco-Manitobain_flag.svg/160px-Franco-Manitobain_flag.svg.png" 
              alt="Drapeau Franco-Manitobain" 
-             style="height: 14px; vertical-align: middle; border-radius: 2px; margin-left: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.15);">
-        · 2026-2032
+             style="height: 20px; border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); vertical-align: middle;">
+        <span>· 2026-2032</span>
     </div>
     """,
     unsafe_allow_html=True

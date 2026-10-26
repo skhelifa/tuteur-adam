@@ -1037,18 +1037,23 @@ elif "Portail Parents" in navigation_espace:
         st.success("💡 **Note de l'équipe :** Adam fait preuve d'une excellente assiduité socratique en français. Encouragez-le à continuer !")
 
 
-# Pied de page institutionnel avec le Bison et le Drapeau Franco-Manitobain
+# Pied de page institutionnel & Dédicace du Fondateur
 st.divider()
 st.markdown(
     """
-    <div style="text-align: center; color: #888888; font-size: 0.9rem; padding: 10px 0; display: flex; justify-content: center; align-items: center; gap: 8px;">
-        <span>DSFMGPT · Conçu avec rigueur pour l'excellence et l'équité éducative au Manitoba</span>
-        <span style="font-size: 1.25rem;">🦬</span>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Franco-Manitobain_flag.svg/160px-Franco-Manitobain_flag.svg.png" 
-             alt="Drapeau Franco-Manitobain" 
-             style="height: 20px; border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); vertical-align: middle;">
-        <span>· 2026-2032</span>
+    <div style="text-align: center; padding: 20px 10px 15px 10px; line-height: 1.7;">
+        <div style="font-weight: 700; color: #f1f5f9; font-size: 1.05rem; letter-spacing: 0.3px; margin-bottom: 6px;">
+            DSFMGPT · Conçu avec passion et rigueur par <span style="color: #60a5fa;">Sami KHALIFA</span>
+        </div>
+        <div style="font-style: italic; color: #cbd5e1; max-width: 850px; margin: 0 auto; font-size: 0.96rem;">
+            « Offert avec amour et gratitude à cette terre du Manitoba qui a ouvert ses bras à ma famille et à mes enfants — 
+            puisse cette œuvre semer l’excellence, l’équité et la lumière du savoir dans le cœur de chaque élève. »
+        </div>
+        <div style="font-size: 0.82rem; color: #64748b; margin-top: 10px; font-weight: 500;">
+            Écosystème Pédagogique Souverain · Manitoba 🦬 🌾 ⚜️ · 2026-2032
+        </div>
     </div>
     """,
     unsafe_allow_html=True
+)
 )

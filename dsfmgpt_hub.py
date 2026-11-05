@@ -15,98 +15,111 @@ import streamlit.components.v1 as components
 
 # -----------------------------------------------------------------------------
 # MTS AI Hub — Écosystème Pédagogique Souverain du Manitoba (10 Modules)
-# Manitoba Teachers' Society · 16 000+ Enseignants · DSFM & Divisions Scolaires
+# Manitoba Teachers' Society · 16 000+ Membres · Francophone, Immersion & Anglophone
 # -----------------------------------------------------------------------------
 
 APP_DIR = Path(__file__).parent
 DOCS_DIR = APP_DIR / "documents"
+DAYBOOKS_DIR = DOCS_DIR / "daybooks_archive"
+DAYBOOKS_DIR.mkdir(parents=True, exist_ok=True)
 
 COURSES = {
-    "Biology 40S": {
+    "Biology 40S / Biologie 40S": {
         "folder": "biology",
         "welcome": (
-            "Salut Adam ! Bienvenue en Biologie 40S. Sur quel sujet travaillons-nous"
-            " aujourd'hui ? Génétique, hérédité mendélienne, mécanismes d'évolution ou biologie cellulaire ?"
+            "Bonjour et bienvenue sur votre tuteur en Biologie 40S (12e année) ! "
+            "Sur quel concept explorons-nous aujourd'hui ? Génétique mendélienne, "
+            "biologie moléculaire, écologie ou mécanismes de l'évolution ?"
         ),
         "system": """
-Tu es le tuteur d'Adam pour le cours de Biologie 40S (12e année) au Manitoba (normes BEF et MTS).
-APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Ne donne jamais de réponses directes toutes faites.
-Pose UNE SEULE question claire à la fois, utilise des indices gradués, stimule le raisonnement et valide chaque étape.
+Tu es le tuteur socratique de niveau provincial pour le cours de Biologie 40S (12e année) au Manitoba (BEF / Manitoba Education standards).
+APPROCHE : Enseigne avec rigueur, bienveillance et clarté. Ne donne jamais la solution finale directement.
+Pose une seule question d'étayage à la fois, utilise des indices gradués et stimule la démarche scientifique de l'élève.
+S'adapte automatiquement à la langue choisie par l'élève (Français ou Anglais).
 """,
     },
-    "Computer Science 40S (Python/STIAM)": {
+    "Computer Science 40S / STIAM": {
         "folder": "cs40s",
         "welcome": (
-            "Bienvenue au laboratoire STIAM & Informatique 40S ! Quels algorithmes, structures"
-            " de données ou défis Python explorons-nous aujourd'hui ?"
+            "Bienvenue au laboratoire d'informatique et STIAM 40S ! "
+            "Quels algorithmes, structures de données ou projets de codage abordons-nous ?"
         ),
         "system": """
-Tu es le tuteur socratique en informatique et sciences computationnelles (STIAM) pour le Manitoba (MTS AI).
-APPROCHE SOCRATIQUE : Guide l'élève dans la compréhension de ses erreurs d'algorithme et de syntaxe en français, sans écrire le code à sa place.
+Tu es le tuteur socratique en sciences computationnelles et STIAM pour les écoles du Manitoba (MTS AI).
+Guide l'élève dans l'analyse de ses algorithmes et la résolution de ses bogues logiques sans écrire le code à sa place.
 """,
     },
     "English — Comprehensive Focus 40S": {
         "folder": "english",
         "welcome": (
-            "Salut Adam ! Bienvenue en Anglais Comprehensive Focus 40S. Nous"
-            " pouvons travailler sur la lecture critique, l'analyse littéraire ou l'écriture persuasive."
+            "Welcome to English Comprehensive Focus 40S! "
+            "Would you like to work on critical text analysis, essay synthesis, or persuasive writing today?"
         ),
         "system": """
-Tu es le tuteur d'Adam pour le cours d'anglais Comprehensive Focus 40S au Manitoba.
-APPROCHE SOCRATIQUE OBLIGATOIRE : Guide la méthodologie et la structure argumentative en français, étape par étape, sans rédiger le travail à sa place.
+You are the Socratic writing and analytical mentor for Manitoba Grade 12 English (Comprehensive Focus 40S).
+Guide the student methodically through thesis formulation, evidence synthesis, and rhetorical style step-by-step.
+Do not write essays for the student; ask thoughtful prompting questions.
 """,
     },
     "Cinema — Witness to Modern History 40S": {
         "folder": "cinema",
         "welcome": (
-            "Salut Adam ! Bienvenue en Cinéma (Témoin de l'histoire moderne 40S)."
-            " Quel film, réalisateur ou contexte historique souhaites-tu analyser aujourd'hui ?"
+            "Bienvenue en Cinéma : Témoin de l'histoire moderne 40S. "
+            "Quel film, courant cinématographique ou perspective historique analysons-nous ?"
         ),
         "system": """
-Tu es le tuteur d'Adam pour le cours « Le cinéma, témoin de l'histoire moderne 40S » (Manitoba).
-APPROCHE SOCRATIQUE OBLIGATOIRE : Enseigne en FRANÇAIS. Guide-le par des questions réflexives sur le langage cinématographique et la réalité historique.
+Tu es le tuteur pour le cours d'histoire et langage cinématographique 40S au Manitoba.
+Guide l'élève à décoder la mise en scène, le contexte sociopolitique et la véracité documentaire par des relances réflexives.
 """,
     },
 }
 
 CONTEXT_MODES = {
     "🎓 Standard Socratique (Consolidation)": {
-        "prompt": "MÉTHODE SOCRATIQUE CLASSIQUE : Pose UNE SEULE question à la fois. Donne des indices sans donner la réponse finale.",
+        "prompt": "MÉTHODE SOCRATIQUE CLASSIQUE : Pose UNE SEULE question à la fois. Offre des indices gradués sans donner la réponse brute.",
         "temp": 0.4,
+    },
+    "🇫🇮 Co-Enquête & Autonomie Active (Modèle Finlandais)": {
+        "prompt": (
+            "POSTURE MODÈLE FINLANDAIS (Inquiry-Based Learning) : Agis comme un co-chercheur et facilitateur. "
+            "Encourage l'élève à formuler ses propres questions, à tester des hypothèses pratiques et à faire des liens "
+            "avec des phénomènes réels de sa communauté. Favorise une autonomie chaleureuse et la confiance en soi."
+        ),
+        "temp": 0.5,
+    },
+    "🇯🇵 Mimamoru & Hansei (Modèle Japonais - Autocorrection)": {
+        "prompt": (
+            "POSTURE MODÈLE JAPONAIS (Mimamoru & Hansei) : Observe la pensée de l'élève avec une grande courtoisie sans intervenir brutalement. "
+            "Si l'élève fait une erreur, ne la sanctionne pas : demande-lui poliment d'expliciter chaque maillon de sa démarche "
+            "pour qu'il expérimente le Hansei (auto-réflexion introspective) et découvre lui-même sa propre correction."
+        ),
+        "temp": 0.3,
     },
     "🚀 Défi & Approfondissement (Élèves avancés)": {
         "prompt": (
-            "POSTURE ÉLÈVE AVANCÉ / ENRICHISSEMENT : Hausse l'exigence conceptuelle (Taxonomie de Bloom supérieure). "
-            "Pose des questions ouvertes, stimule la pensée critique, teste la robustesse de l'argumentation avec des contre-exemples "
-            "ou des liens avec la recherche universitaire contemporaine."
+            "POSTURE ENRICHISSEMENT : Hausse l'exigence conceptuelle (Taxonomie de Bloom supérieure). "
+            "Propose des contre-exemples stimulants, teste la solidité argumentative et relie les notions à la recherche actuelle."
         ),
         "temp": 0.4,
     },
     "❄️ Grand Froid & Tempête (Continuité Blizzard)": {
         "prompt": (
-            "POSTURE TEMPÊTE & BLIZZARD (MTS) : Adopte un ton particulièrement chaleureux, dynamique et bienveillant. "
-            "Maintiens une immersion orale et écrite soutenue pour briser l'isolement de l'élève à la maison et préserver le lien d'apprentissage."
+            "POSTURE TEMPÊTE & BLIZZARD (MTS) : Ton particulièrement chaleureux, rassurant et interactif. "
+            "Maintiens le sentiment d'appartenance et brise l'isolement de l'élève connecté depuis la maison lors d'une fermeture d'école."
         ),
         "temp": 0.5,
     },
-    "⏱️ Examen Provincial 40S (Simulation BEF/Manitoba)": {
+    "⏱️ Examen Provincial 40S (Simulation BEF / Manitoba)": {
         "prompt": (
-            "POSTURE EXAMINATEUR PROVINCIAL : Évalue formellement selon les grilles ministérielles de 12e année. "
-            "Analyse avec précision la démarche, relève les imprécisions de vocabulaire et quantifie le barème."
+            "POSTURE EXAMINATEUR PROVINCIAL : Évalue formellement selon les barèmes ministériels de 12e année. "
+            "Mesure la précision de la terminologie scientifique, la clarté du raisonnement et chiffre le barème."
         ),
         "temp": 0.2,
     },
-    "🌴 Trêve & Vacances (Micro-défis)": {
-        "prompt": (
-            "POSTURE TRÊVE LUDIQUE : Propose des énigmes, défis de logique et anecdotes culturelles passionnantes en français "
-            "pour stimuler l'esprit sans créer d'anxiété de devoirs."
-        ),
-        "temp": 0.7,
-    },
     "🌍 Francisation & Accueil (Inclusion)": {
         "prompt": (
-            "POSTURE FRANCISATION & ACCUEIL : Emploie une syntaxe fluide et limpide. Définis les termes complexes entre parenthèses "
-            "et fournis des repères lexicaux bilingues d'appoint si nécessaire."
+            "POSTURE FRANCISATION & ACCUEIL : Vocabulaire clair, phrases limpides, mise entre parenthèses des termes techniques "
+            "et repères bilingues d'appoint si nécessaire pour les nouveaux arrivants."
         ),
         "temp": 0.3,
     },
@@ -200,7 +213,6 @@ st.markdown(
             font-weight: 600;
             font-size: 0.75rem;
         }
-        /* Balises d'étayage visuel (Mode Guidé) */
         .guide-badge {
             display: inline-flex;
             align-items: center;
@@ -268,13 +280,13 @@ def generer_image_souveraine(contexte_texte: str, focus_visuel: str):
         return None
 
 
-def speak_text(text: str):
+def speak_text(text: str, lang_code="fr-FR"):
     clean_text = text.replace("'", "\\'").replace('"', '\\"').replace("\n", " ").replace("\r", " ")
     js_code = f"""
     <script>
         window.speechSynthesis.cancel();
         var msg = new SpeechSynthesisUtterance("{clean_text}");
-        msg.lang = 'fr-FR';
+        msg.lang = '{lang_code}';
         window.speechSynthesis.speak(msg);
     </script>
     """
@@ -285,11 +297,13 @@ def stop_speech():
     components.html("<script>window.speechSynthesis.cancel();</script>", height=0)
 
 
-# Variables d'état & Initialisation du Guidage
+# Variables d'état & Initialisation
 if "nav_active" not in st.session_state:
     st.session_state.nav_active = "🏠 Accueil & Vue d'Ensemble"
 if "guide_interactif" not in st.session_state:
     st.session_state.guide_interactif = True
+if "student_name" not in st.session_state:
+    st.session_state.student_name = ""
 if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = None
 if "quiz_submitted" not in st.session_state:
@@ -310,10 +324,9 @@ if "current_eval_data" not in st.session_state:
     st.session_state.current_eval_data = ""
 
 
-# Générateur de QCM au format JSON (Structure sécurisée contre les erreurs de guillemets)
 def generate_qcm_from_context(course_title, system_prompt, discussion_context, number_questions=10):
     prompt_lines = [
-        f"En te basant sur la discussion récente et le cours : {course_title}, crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM) en français.",
+        f"En te basant sur la discussion récente et le cours : {course_title}, crée un quiz d'entraînement de {number_questions} questions à choix multiples (QCM).",
         f"Contexte récent :\n{discussion_context}",
         "Format strict : 4 options (A, B, C, D), une seule réponse correcte, un indice et une explication.",
         'Renvoie UNIQUEMENT un objet JSON valide avec cette structure : {"questions": [{"question": "...", "options": {"A":"...", "B":"...", "C":"...", "D":"..."}, "correct": "A", "hint": "...", "explanation": "..."}]}'
@@ -354,7 +367,7 @@ def load_pdf_chunks(folder_string: str):
             paragraphs = [p.strip() for p in re.split(r"\n\s*\n", full_text) if p.strip()]
             current = ""
             is_custom = "custom_teacher" in str(pdf_path)
-            prefix = "[Ressource Enseignant]" if is_custom else "[Curriculum Manitoba/BEF]"
+            prefix = "[Ressource Enseignant]" if is_custom else "[Curriculum Manitoba]"
             for para in paragraphs:
                 if len(current) + len(para) > 1400 and current:
                     chunks.append({"source": f"{prefix} {pdf_path.name}", "text": current})
@@ -397,26 +410,44 @@ def retrieve_chunks(question: str, chunks: list, limit: int = 4):
     return [chunk for _, chunk in scored[:limit]]
 
 
-# --- LISTE OFFICIELLE DES 10 MODULES MTS AI ---
+# --- LISTE DES 10 MODULES OFFICIELS ---
 MODULES_LIST = [
     "🏠 Accueil & Vue d'Ensemble",
-    "1. 👩‍🏫 Assistant BEF",
+    "1. 👩‍🏫 Assistant BEF / CUA",
     "2. 🎓 Tuteur Socratique",
     "3. 🏢 Admin & Impact MTS",
     "4. 🛡️ InfoSec & FIPPA",
     "5. 💻 STIAM & Sandbox Codage",
-    "6. 🔄 Suppléance & ERP Atrieve",
+    "6. 🔄 Suppléance & Daybook",
     "7. 🤝 Auxiliaires EA & Inclusion",
     "8. 👨‍👩‍👦 Portail Parents & Tuteurs",
     "9. 🌍 Lab Phénomènes (PhBL)",
     "10. 🧠 Moteur Neuro-Cognitif"
 ]
 
-# --- BARRE LATÉRALE DE CONTRÔLE ---
+# --- BARRE LATÉRALE DE CONTRÔLE MULTI-DIVISIONS ---
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/school.png", width=54)
+    st.image("https://img.icons8.com/fluency/96/school.png", width=52)
     st.title("MTS AI Hub")
     st.caption("Manitoba Teachers' Society · 16 000+ Membres")
+
+    # Profil Institutionnel Provincial
+    st.markdown("### 🏛️ Division & Langue")
+    div_locale = st.selectbox(
+        "Division scolaire :",
+        [
+            "DSFM (Division scolaire franco-manitobaine)",
+            "Winnipeg School Division (WSD #1)",
+            "Pembina Trails School Division",
+            "Louis Riel School Division (LRSD)",
+            "St. James-Assiniboia School Division",
+            "River East Transcona School Division",
+            "Brandon School Division",
+            "Autre division scolaire manitobaine"
+        ],
+        help="Adapte le profil curriculaire, les conventions et les flux administratifs selon votre division."
+    )
+    langue_choisie = st.radio("Langue de l'espace :", ["Français (Immersion & Français langue première)", "English (Standard)"], horizontal=True)
 
     default_idx = MODULES_LIST.index(st.session_state.nav_active) if st.session_state.nav_active in MODULES_LIST else 0
     navigation_espace = st.radio(
@@ -427,43 +458,39 @@ with st.sidebar:
     st.session_state.nav_active = navigation_espace
 
     st.markdown("---")
-    st.markdown("### 📚 Cours Actif")
+    st.markdown("### 📚 Matière & Pédagogie")
     course_name = st.selectbox(
-        "Matière :",
+        "Matière / Programme :",
         list(COURSES.keys()),
-        help="Sélectionnez la matière ou le curriculum manitobain sur lequel travaille le tuteur ou l'assistant."
+        help="Choix du programme de cours manitobain indexé."
     )
     course = COURSES[course_name]
     folder = DOCS_DIR / course["folder"]
 
-    st.markdown("---")
-    st.markdown("### 🎛️ Posture Pédagogique")
     mode_selectionne = st.selectbox(
-        "Mode contextuel :",
+        "Posture d'apprentissage :",
         list(CONTEXT_MODES.keys()),
-        help="Ajuste la posture de l'IA : étayage socratique doux, défi supérieur, simulation d'examen ou mode tempête/blizzard."
+        help="Choisissez le modèle pédagogique : Socratique, Modèle Finlandais d'investigation ou Modèle Japonais d'auto-réflexion."
     )
     mode_info = CONTEXT_MODES[mode_selectionne]
 
     st.markdown("---")
-    st.markdown("### 🧭 Aide & Balises de Guidage")
+    st.markdown("### 🧭 Balises d'Accompagnement")
     guide_toggle = st.toggle(
         "Activer le Mode Guidé (Repères)",
         value=st.session_state.guide_interactif,
-        help="Affiche des repères visuels pas-à-pas (Étape 1, 2, 3), des encadrés explicatifs et des conseils de saisie sur chaque module."
+        help="Affiche des badges étape par étape et des encadrés conseils dans chaque module."
     )
     st.session_state.guide_interactif = guide_toggle
-    if guide_toggle:
-        st.info("💡 **Mode Guidé Actif** : Des balises visuelles numérotées et des infobulles vous assistent à chaque étape.")
 
     st.markdown("---")
-    st.markdown("### 🔊 Audio & Dictée Whisper")
-    enable_voice_output = st.checkbox("Lecture vocale automatique", value=True)
+    st.markdown("### 🔊 Dictée & Voix")
+    enable_voice_output = st.checkbox("Synthèse vocale active", value=True)
     if st.button("🛑 Couper la voix", use_container_width=True):
         stop_speech()
         st.success("Voix coupée.")
 
-    audio_value = st.audio_input("Dictée vocale directe")
+    audio_value = st.audio_input("Dictée vocale directe (Whisper)")
 
 
 # =============================================================================
@@ -481,14 +508,14 @@ if "Accueil" in navigation_espace:
             </div>
             <div class="hero-subtitle">
                 Infrastructure d'Intelligence Artificielle Souveraine, Équitable & Pédagogique<br>
-                Déployée pour la <strong>Manitoba Teachers' Society (MTS)</strong> et l'ensemble des 16 000+ enseignants de la province.
+                Conçue pour la <strong>Manitoba Teachers' Society (MTS)</strong> et l'ensemble des divisions scolaires de la province.
             </div>
             <div>
                 <span class="tag-pill">🏛️ Écosystème Provincial des 10 Modules</span>
                 <span class="tag-pill">🔒 Souveraineté & Protection FIPPA</span>
-                <span class="tag-pill-blue">❄️ Continuité Blizzard (-40°C)</span>
+                <span class="tag-pill-blue">🇫🇮 Inspiration Finlande (PhBL)</span>
+                <span class="tag-pill-blue">🇯🇵 Modèle Japon (Hansei/Métacognition)</span>
                 <span class="tag-pill-blue">⏱️ Prévention de l'Épuisement MTS</span>
-                <span class="tag-pill-blue">🧠 Neurosciences & PhBL Avancés</span>
             </div>
         </div>
         """,
@@ -497,22 +524,21 @@ if "Accueil" in navigation_espace:
 
     if st.session_state.guide_interactif:
         st.markdown(
-            """
+            f"""
             <div class="guide-box">
-                👋 <strong>Bienvenue sur MTS AI Hub !</strong><br>
-                • <strong>Première visite ?</strong> Cliquez sur l'une des 10 cartes ci-dessous pour ouvrir un espace de travail dédié.<br>
-                • <strong>Pour les enseignants :</strong> Découvrez le <em>Module 1 (Assistant BEF)</em> pour générer un plan CUA ou le <em>Module 6 (Suppléance & Daybook)</em> pour imprimer votre feuille de journée.<br>
-                • <strong>Pour les élèves :</strong> Rendez-vous sur le <em>Module 2 (Tuteur Socratique)</em> pour réviser avec un accompagnement pas-à-pas bienveillant.<br>
-                • <em>Note : Vous pouvez masquer ces repères à tout moment via le commutateur dans la barre latérale gauche.</em>
+                👋 <strong>Bienvenue au Hub MTS AI pour : {div_locale} !</strong><br>
+                • <strong>Pour planifier :</strong> Le <em>Module 1</em> génère des leçons CUA complètes et le <em>Module 6</em> génère votre cartable de suppléance imprimable.<br>
+                • <strong>Pour les élèves :</strong> Le <em>Module 2</em> fournit un tuteur socratique qui favorise l'effort intellectuel sans donner de réponses toutes faites.<br>
+                • <strong>Pour l'administration :</strong> Le <em>Module 3</em> mesure l'allègement concret de la tâche enseignante (heures récupérées par semaine).
             </div>
             """,
             unsafe_allow_html=True
         )
 
     c_k1, c_k2, c_k3, c_k4 = st.columns(4)
-    c_k1.metric("Couverture Provinciale", "10 Modules", "Membres MTS & DSFM")
-    c_k2.metric("Allègement de la Tâche", "~4.8 h / semaine", "Prévention burnout MTS")
-    c_k3.metric("Équité Territoriale STEM", "24/7 Autonome", "Rural & Urbain garanti")
+    c_k1.metric("Couverture Provinciale", "10 Modules", "Membres MTS & Divisions")
+    c_k2.metric("Gain Hebdomadaire", "~4.8 h / enseignant", "Allègement de tâche")
+    c_k3.metric("Équité Territoriale", "24/7 Autonome", "Urbain, Rural & Nord")
     c_k4.metric("Souveraineté des Données", "Manitoba Local", "Zéro fuite FIPPA/LAIPVP")
 
     st.markdown("### 🧭 La Matrice des 10 Services MTS AI")
@@ -520,56 +546,31 @@ if "Accueil" in navigation_espace:
 
     r1_c1, r1_c2, r1_c3, r1_c4, r1_c5 = st.columns(5)
     with r1_c1:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>👩‍🏫 1. Assistant BEF</h4><p>Plans de cours CUA multiniveau, adaptations PAT et fiches de révision.</p></div>
-                <small>Public : Enseignants titulaires</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>👩‍🏫 1. Assistant BEF/CUA</h4><p>Plans de cours CUA multiniveau, adaptations PAT et fiches d'évaluation.</p></div><small>Public : Enseignants titulaires</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 1 ➔", key="btn_m1", use_container_width=True):
-            st.session_state.nav_active = "1. 👩‍🏫 Assistant BEF"
+            st.session_state.nav_active = "1. 👩‍🏫 Assistant BEF / CUA"
             st.rerun()
 
     with r1_c2:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🎓 2. Tuteur Socratique</h4><p>Tutorat vocal bienveillant, quiz 10 questions et schémas scientifiques RAG.</p></div>
-                <small>Public : Élèves 40S / K-12</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🎓 2. Tuteur Socratique</h4><p>Accompagnement bienveillant, quiz 10 questions et schémas scientifiques RAG.</p></div><small>Public : Élèves 40S / K-12</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 2 ➔", key="btn_m2", use_container_width=True):
             st.session_state.nav_active = "2. 🎓 Tuteur Socratique"
             st.rerun()
 
     with r1_c3:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🏢 3. Admin & MTS</h4><p>Baromètre du gain de temps et allègement de la charge enseignante.</p></div>
-                <small>Public : Directions & MTS</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🏢 3. Admin & MTS</h4><p>Baromètre du gain de temps et allègement de la charge enseignante.</p></div><small>Public : Directions & MTS</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 3 ➔", key="btn_m3", use_container_width=True):
             st.session_state.nav_active = "3. 🏢 Admin & Impact MTS"
             st.rerun()
 
     with r1_c4:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🛡️ 4. InfoSec FIPPA</h4><p>Masquage dynamique des PII, chiffrement TLS 1.3 et registre audit SHA-256.</p></div>
-                <small>Public : Services TI</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🛡️ 4. InfoSec FIPPA</h4><p>Masquage dynamique des PII, chiffrement TLS 1.3 et registre audit SHA-256.</p></div><small>Public : Services TI</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 4 ➔", key="btn_m4", use_container_width=True):
             st.session_state.nav_active = "4. 🛡️ InfoSec & FIPPA"
             st.rerun()
 
     with r1_c5:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>💻 5. STIAM Sandbox</h4><p>Bac à sable d'exécution Python en direct et débogueur socratique 24/7.</p></div>
-                <small>Public : Secondaire STEM</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>💻 5. STIAM Sandbox</h4><p>Bac à sable d'exécution Python en direct et débogueur socratique 24/7.</p></div><small>Public : Secondaire STEM</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 5 ➔", key="btn_m5", use_container_width=True):
             st.session_state.nav_active = "5. 💻 STIAM & Sandbox Codage"
             st.rerun()
@@ -578,81 +579,58 @@ if "Accueil" in navigation_espace:
 
     r2_c1, r2_c2, r2_c3, r2_c4, r2_c5 = st.columns(5)
     with r2_c1:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🔄 6. Suppléance ERP</h4><p>Dossier prêt à 8 h 15, Daybook cycle 6 jours et continuité sans rupture.</p></div>
-                <small>Public : Titulaires & Suppléants</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🔄 6. Suppléance Daybook</h4><p>Cartables imprimables (Cycle 6 jours & Secondaire) et banque d'exemplaires réels.</p></div><small>Public : Titulaires & Suppléants</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 6 ➔", key="btn_m6", use_container_width=True):
-            st.session_state.nav_active = "6. 🔄 Suppléance & ERP Atrieve"
+            st.session_state.nav_active = "6. 🔄 Suppléance & Daybook"
             st.rerun()
 
     with r2_c2:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🤝 7. Auxiliaires EA</h4><p>Feuilles de mission minute, guide de relance socratique et bilans PEI.</p></div>
-                <small>Public : Équipes Inclusion</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🤝 7. Auxiliaires EA</h4><p>Feuilles de mission minute, guide de relance socratique et bilans PEI.</p></div><small>Public : Équipes Inclusion</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 7 ➔", key="btn_m7", use_container_width=True):
             st.session_state.nav_active = "7. 🤝 Auxiliaires EA & Inclusion"
             st.rerun()
 
     with r2_c3:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>👨‍👩‍👦 8. Parents/Tuteurs</h4><p>Métriques d'effort, accord légal des binômes d'étude et liaison foyer.</p></div>
-                <small>Public : Familles & Tuteurs</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>👨‍👩‍👦 8. Parents/Tuteurs</h4><p>Métriques d'effort, accord légal des binômes d'étude et liaison foyer.</p></div><small>Public : Familles & Tuteurs</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 8 ➔", key="btn_m8", use_container_width=True):
             st.session_state.nav_active = "8. 👨‍👩‍👦 Portail Parents & Tuteurs"
             st.rerun()
 
     with r2_c4:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🌍 9. Lab Phénomènes</h4><p>Approche transdisciplinaire finlandaise ancrée dans les défis manitobains.</p></div>
-                <small>Public : Projets Inter-matières</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🌍 9. Lab Phénomènes</h4><p>Approche transdisciplinaire finlandaise ancrée dans les défis manitobains.</p></div><small>Public : Projets Inter-matières</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 9 ➔", key="btn_m9", use_container_width=True):
             st.session_state.nav_active = "9. 🌍 Lab Phénomènes (PhBL)"
             st.rerun()
 
     with r2_c5:
-        st.markdown(
-            """<div class="module-card">
-                <div><h4>🧠 10. Neuro-Cognitif</h4><p>Métacognition active, anti-paresse cérébrale et répétition espacée.</p></div>
-                <small>Public : Sciences Cognitives</small>
-            </div>""", unsafe_allow_html=True
-        )
+        st.markdown("""<div class="module-card"><div><h4>🧠 10. Neuro-Cognitif</h4><p>Métacognition active, anti-paresse cérébrale et répétition espacée.</p></div><small>Public : Sciences Cognitives</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 10 ➔", key="btn_m10", use_container_width=True):
             st.session_state.nav_active = "10. 🧠 Moteur Neuro-Cognitif"
             st.rerun()
 
 
 # =============================================================================
-# MODULE 1 : ASSISTANT BEF (ENSEIGNANT)
+# MODULE 1 : ASSISTANT BEF / CUA (ENSEIGNANT)
 # =============================================================================
 elif "Assistant BEF" in navigation_espace:
-    st.title("👩‍🏫 Module 1 : Assistant Pédagogique BEF / MTS")
-    st.caption("Génération de plans de leçon CUA différenciés, évaluations formatives et gestion de classeur NotebookLM")
+    st.title("👩‍🏫 Module 1 : Assistant Pédagogique BEF & Planification CUA")
+    st.caption("Conception accélérée de plans de leçons différenciés, évaluations formatives et classeur curriculaire")
 
     if st.session_state.guide_interactif:
         st.markdown(
             """
             <div class="guide-box">
-                🎯 <strong>Guide Enseignant :</strong> Ce module vous fait gagner ~2 h de préparation par leçon.
-                Renseignez le code ministériel BEF (Étape 1), ajustez vos besoins d'inclusion (Étape 2), puis cliquez sur le bouton rouge pour obtenir un plan de cours complet en 4 phases.
+                🎯 <strong>Guide Enseignant :</strong><br>
+                • <strong>Étape 1 :</strong> Renseignez le code ministériel et l'objectif de la séance.<br>
+                • <strong>Étape 2 :</strong> Précisez les aménagements nécessaires pour l'inclusion et le défi pour les élèves rapides.<br>
+                • <strong>Étape 3 :</strong> Cliquez sur le bouton rouge pour produire le déroulé complet en 4 phases.
             </div>
             """,
             unsafe_allow_html=True
         )
 
     tab_bef, tab_eval, tab_notebook, tab_video = st.tabs([
-        "📋 Planification Différenciée (BEF / PAT / Défi)",
+        "📋 Planification Différenciée (CUA / PAT / Défi)",
         "📊 Évaluation Formative & par les Pairs",
         "📚 Mon Classeur (Esprit NotebookLM)",
         "🎬 Studio Capsule Dialoguée (Continuité Blizzard)"
@@ -663,33 +641,33 @@ elif "Assistant BEF" in navigation_espace:
         col_t1, col_t2 = st.columns(2)
         with col_t1:
             if st.session_state.guide_interactif:
-                st.markdown('<span class="guide-badge">📍 Étape 1 : Le Cadre Ministériel</span>', unsafe_allow_html=True)
+                st.markdown('<span class="guide-badge">📍 Étape 1 : Cadre Ministériel</span>', unsafe_allow_html=True)
             ras_input = st.text_input(
-                "Code RAS BEF :",
+                "Code RAS ministériel :",
                 value="B12-2-03 (Lois de Mendel)",
-                help="Saisissez le code officiel du résultat d'apprentissage manitobain (ex. B12-2-03 pour la bio, M10-3 pour les maths)."
+                help="Saisissez le code du résultat d'apprentissage manitobain visé."
             )
             sujet_lecon = st.text_input(
                 "Sujet de la leçon :",
                 value="Monohybridisme et grilles de Punnett",
-                help="Thème précis de votre séquence d'enseignement de 60 minutes."
+                help="Intitulé thématique précis de la période de cours."
             )
         with col_t2:
             if st.session_state.guide_interactif:
-                st.markdown('<span class="guide-badge">📍 Étape 2 : L\'Inclusion & Différenciation</span>', unsafe_allow_html=True)
+                st.markdown('<span class="guide-badge">📍 Étape 2 : Inclusion & Différenciation</span>', unsafe_allow_html=True)
             profil_pat = st.text_area(
-                "Adaptations PAT (Dyslexie / Visuel) :",
-                value="2 élèves en PAT (textes aérés, étayage visuel).",
-                help="Spécifiez les aménagements nécessaires pour vos élèves à besoins particuliers (sans données nominatives, conforme FIPPA)."
+                "Adaptations PAT / IEP :",
+                value="2 élèves en PAT (textes aérés, étayage visuel, consignes découpées).",
+                help="Besoins particuliers d'adaptation (sans données nominatives directes, conforme FIPPA)."
             )
             profil_avance = st.text_area(
-                "Enrichissement (Élèves avancés) :",
-                value="3 élèves très rapides (probabilités mendéliennes complexes).",
-                help="Précisez ce que l'IA doit concevoir pour nourrir les élèves à haut potentiel ou très rapides."
+                "Enrichissement & Défi :",
+                value="3 élèves très rapides (probabilités mendéliennes complexes et dihybridisme).",
+                help="Tâches complexes à proposer pour stimuler les élèves en avance."
             )
 
         if st.session_state.guide_interactif:
-            st.markdown('<span class="guide-badge">📍 Étape 3 : Génération en un clic</span>', unsafe_allow_html=True)
+            st.markdown('<span class="guide-badge">📍 Étape 3 : Production en 1 clic</span>', unsafe_allow_html=True)
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             l_btn = st.button("🚀 Générer la leçon multiniveau complète", type="primary", use_container_width=True)
@@ -699,18 +677,18 @@ elif "Assistant BEF" in navigation_espace:
         if l_btn:
             with st.spinner("Génération du plan pédagogique CUA…"):
                 p_prompt = (
-                    "Tu es un conseiller pédagogique expert au Manitoba (MTS AI / BEF).\n"
-                    f"Crée un plan de leçon rigoureux, complet et structuré pour le cours : {course_name}.\n"
-                    f"- Résultat d'apprentissage : {ras_input}\n"
+                    f"Tu es un conseiller pédagogique expert pour la Manitoba Teachers' Society ({div_locale}).\n"
+                    f"Crée un plan de leçon rigoureux et structuré pour : {course_name}.\n"
+                    f"- Résultat d'apprentissage ministériel : {ras_input}\n"
                     f"- Sujet : {sujet_lecon}\n"
                     f"- Adaptations PAT : {profil_pat}\n"
                     f"- Élèves avancés : {profil_avance}\n\n"
-                    "Structure obligatoire :\n"
-                    "1. 🎯 Objectifs ministériels et critères de réussite observables (BEF/MTS).\n"
-                    "2. 📖 Déroulement de classe (Amorce 10 min, Enseignement 15 min, Pratique guidée 25 min, Objectivation 10 min).\n"
-                    "3. ♿ Volet Adaptations & PAT (Aménagements matériels, consignes découpées, CUA).\n"
-                    "4. 🚀 Volet Enrichissement & Défi (Tâches à haut niveau taxonomique de Bloom, problèmes ouverts).\n"
-                    "5. 💡 Grille de 3 questions socratiques clés pour le bilan.\n"
+                    "Structure attendue :\n"
+                    "1. 🎯 Objectifs ministériels observables et critères de réussite explicites.\n"
+                    "2. 📖 Déroulement de classe (Amorce 10 min, Enseignement explicite 15 min, Pratique guidée 25 min, Clôture 10 min).\n"
+                    "3. ♿ Volet Inclusion & CUA (Aménagements matériels et consignes adaptées).\n"
+                    "4. 🚀 Volet Enrichissement (Défis ouverts à haut niveau cognitif).\n"
+                    "5. 💡 3 questions socratiques de relance pour vérifier l'assimilation.\n"
                 )
                 resp = client.chat.completions.create(
                     model="gpt-4o-mini",
@@ -727,12 +705,12 @@ elif "Assistant BEF" in navigation_espace:
                 les_data = st.session_state.current_lesson_plan or f"Lesson: {sujet_lecon}."
                 img_url_t = generer_image_souveraine(les_data, f"Schéma scientifique de {sujet_lecon}")
                 if img_url_t:
-                    st.image(img_url_t, caption="Illustration générée à partir des ressources locales.")
+                    st.image(img_url_t, caption="Illustration scientifique générée localement")
 
     with tab_eval:
-        st.subheader("📊 Évaluations Formatives & par les Pairs (Normes BEF / MTS)")
-        type_eval = st.radio("Type d'instrument :", ["🎟️ Billet de Sortie Flash (3 min)", "👥 Grille d'Évaluation par les Pairs (Deux étoiles et un souhait)", "🎯 Sonde Diagnostique Rapide"], horizontal=True)
-        sujet_eval = st.text_input("Notion ciblée :", value="L'analyse des allèles dominants et récessifs", help="Le concept précis que vous voulez vérifier avant la fin de l'heure.")
+        st.subheader("📊 Évaluations Formatives & par les Pairs (Normes Manitoba)")
+        type_eval = st.radio("Type d'outil :", ["🎟️ Billet de Sortie Flash (3 min)", "👥 Grille d'Évaluation par les Pairs (Deux étoiles et un souhait)", "🎯 Sonde Diagnostique Rapide"], horizontal=True)
+        sujet_eval = st.text_input("Notion ciblée :", value="L'analyse des allèles dominants et récessifs", help="Le concept précis à sonder.")
         if st.button("✨ Générer l'outil d'évaluation", type="primary"):
             with st.spinner("Conception de l'instrument d'évaluation…"):
                 eval_p = f"Crée un outil d'évaluation formatif conforme aux normes manitobaines. Type : {type_eval}. Matière : {course_name}. Sujet : {sujet_eval}."
@@ -743,12 +721,12 @@ elif "Assistant BEF" in navigation_espace:
         st.subheader("📚 Mon Classeur de Cours (Esprit NotebookLM)")
         custom_folder = DOCS_DIR / course["folder"] / "custom_teacher"
         custom_folder.mkdir(parents=True, exist_ok=True)
-        up_files = st.file_uploader("Ajouter des PDF personnels de cours :", type=["pdf"], accept_multiple_files=True, help="Uploadez vos propres feuilles d'exercices ou guides : l'IA s'en servira prioritairement.")
+        up_files = st.file_uploader("Ajouter des PDF de cours personnels :", type=["pdf"], accept_multiple_files=True, help="Déposez vos propres documents : l'assistant les utilisera en priorité.")
         if up_files:
             for f in up_files:
                 with open(custom_folder / f.name, "wb") as buffer:
                     buffer.write(f.getbuffer())
-            st.success(f"✅ {len(up_files)} ressource(s) ajoutée(s) et indexée(s) !")
+            st.success(f"✅ {len(up_files)} ressource(s) indexée(s) avec succès !")
             st.cache_data.clear()
 
     with tab_video:
@@ -756,7 +734,7 @@ elif "Assistant BEF" in navigation_espace:
         notion_v = st.text_input("Notion clé pour la capsule :", value="Le monohybridisme et la ségrégation mendélienne")
         if st.button("🎥 Scénariser la capsule vidéo"):
             with st.spinner("Scénarisation en cours…"):
-                vid_p = f"Rédige un script de dialogue chaleureux de 2 min entre un élève et son enseignant (voix clonée) sur {notion_v} pour une école du Manitoba."
+                vid_p = f"Rédige un script de dialogue chaleureux de 2 min entre un élève et son enseignant sur {notion_v} pour une école du Manitoba."
                 res_v = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": vid_p}], temperature=0.5)
                 st.markdown(res_v.choices[0].message.content)
 
@@ -766,23 +744,32 @@ elif "Assistant BEF" in navigation_espace:
 # =============================================================================
 elif "Tuteur Socratique" in navigation_espace:
     st.title(f"🎓 Module 2 : Tuteur Socratique MTS AI — {course_name}")
-    st.caption("Accompagnement pédagogique socratique · Guidage pas-à-pas sans réponse directe")
+    st.caption("Accompagnement réflexif bienveillant · Pédagogie de questionnement sans réponse brute")
 
-    if st.session_state.guide_interactif:
-        st.markdown(
-            """
-            <div class="guide-box">
-                👋 <strong>Comment travailler avec ton tuteur socratique :</strong><br>
-                • <strong>Règle d'or :</strong> Le tuteur ne te donnera pas la solution toute faite. Il te pose des questions pour t'aider à raisonner par toi-même.<br>
-                • <strong>Pour répondre :</strong> Écris ta réponse dans la barre tout en bas ou utilise le micro dans la barre de gauche pour parler.<br>
-                • <strong>En cas de blocage :</strong> Clique sur les boutons bleus d'étayage rapide (ex. <em>« Expliquer simplement »</em> ou <em>« Exemple concret »</em>).
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # Personnalisation universelle du prénom de l'élève
+    c_nom1, c_nom2 = st.columns([2, 1])
+    with c_nom1:
+        if st.session_state.guide_interactif:
+            st.markdown(
+                """
+                <div class="guide-box">
+                    👋 <strong>Bienvenue dans votre espace d'apprentissage !</strong><br>
+                    • <strong>Principe :</strong> Le tuteur socratique ne vous donne pas la solution directement ; il vous aide à structurer votre propre réflexion.<br>
+                    • <strong>Comment participer :</strong> Écrivez votre réponse ci-dessous ou dictez-la avec le microphone dans la barre latérale.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+    with c_nom2:
+        prenom_saisi = st.text_input("Prénom de l'élève (optionnel) :", value=st.session_state.student_name, placeholder="Ex: Alexandre, Sarah...")
+        if prenom_saisi != st.session_state.student_name:
+            st.session_state.student_name = prenom_saisi
+
+    greeting_name = f" {st.session_state.student_name}" if st.session_state.student_name.strip() else ""
 
     if course_name not in st.session_state.histories_by_course:
-        st.session_state.histories_by_course[course_name] = [{"role": "assistant", "content": course["welcome"]}]
+        intro_msg = f"Bonjour{greeting_name} ! Bienvenue sur votre espace d'apprentissage en {course_name}. Sur quel point souhaitez-vous avancer aujourd'hui ?"
+        st.session_state.histories_by_course[course_name] = [{"role": "assistant", "content": intro_msg}]
     history = st.session_state.histories_by_course[course_name]
 
     if audio_value is not None:
@@ -811,17 +798,17 @@ elif "Tuteur Socratique" in navigation_espace:
             c1, c2, c3, c4 = st.columns(4)
             b_q = None
             with c1:
-                if st.button("📖 Expliquer simplement", key=f"s1_{idx}", use_container_width=True):
-                    b_q = "Peux-tu m'expliquer cela plus simplement en français avec une analogie visuelle ?"
+                if st.button("📖 Expliquer plus simplement", key=f"s1_{idx}", use_container_width=True):
+                    b_q = "Peux-tu m'expliquer cette idée plus simplement avec une analogie visuelle claire ?"
             with c2:
-                if st.button("📝 Exemple concret", key=f"s2_{idx}", use_container_width=True):
-                    b_q = "Donne-moi un exemple concret issu du cours ou du Manitoba."
+                if st.button("📝 Exemple concret manitobain", key=f"s2_{idx}", use_container_width=True):
+                    b_q = "Donne-moi un exemple concret issu du quotidien ou de la nature au Manitoba."
             with c3:
-                if st.button("🎥 Vidéo YouTube", key=f"s3_{idx}", use_container_width=True):
-                    b_q = "Propose un lien YouTube cliquable pour visualiser ce concept."
+                if st.button("🎥 Vidéo illustrative", key=f"s3_{idx}", use_container_width=True):
+                    b_q = "Propose un lien YouTube ou une ressource visuelle pour explorer ce concept."
             with c4:
-                if st.button("🚀 Défi supérieur", key=f"s4_{idx}", use_container_width=True):
-                    b_q = "Comment relier ce concept à une question scientifique plus avancée ?"
+                if st.button("🚀 Relever un défi supérieur", key=f"s4_{idx}", use_container_width=True):
+                    b_q = "Comment ce concept se relie-t-il à un problème scientifique plus complexe ?"
             if b_q:
                 st.session_state.next_question = b_q
                 st.rerun()
@@ -842,10 +829,10 @@ elif "Tuteur Socratique" in navigation_espace:
                         disc_img = "\n".join([f"{m['role']}: {m['content']}" for m in history[-4:]])
                         all_c = load_pdf_chunks(str(folder))
                         rel_c = retrieve_chunks(disc_img, all_c)
-                        c_txt = "\n\n".join(c["text"] for c in rel_c) if rel_c else "Données générales."
+                        c_txt = "\n\n".join(c["text"] for c in rel_c) if rel_c else "Programme général provincial."
                         u = generer_image_souveraine(c_txt, disc_img)
                         if u:
-                            st.image(u, caption="Illustration scientifique basée sur les données locales")
+                            st.image(u, caption="Illustration scientifique basée sur le contexte local")
 
     if st.session_state.quiz_data:
         questions = st.session_state.quiz_data.get("questions", [])
@@ -891,7 +878,7 @@ elif "Tuteur Socratique" in navigation_espace:
                 st.session_state.next_question = c_txt.strip()
                 st.rerun()
 
-    typed_q = st.chat_input("Pose ta question en français…")
+    typed_q = st.chat_input("Posez votre question ici…")
     active_q = typed_q or st.session_state.pop("next_question", None)
     if active_q and active_q.strip():
         active_q = active_q.strip()
@@ -902,10 +889,10 @@ elif "Tuteur Socratique" in navigation_espace:
         all_c = load_pdf_chunks(str(folder))
         rel_c = retrieve_chunks(active_q, all_c)
         c_block = "\n\n".join(f"[{c['source']}]\n{c['text']}" for c in rel_c) if rel_c else "Programme général provincial."
-        sys_p = f"{course['system']}\n\n{mode_info['prompt']}\n\nExtraits locaux :\n{c_block}\n\nRAPPEL : Socratique, en français, 1 question à la fois."
+        sys_p = f"{course['system']}\n\nDivision scolaire active : {div_locale}\n\nPosture demandée :\n{mode_info['prompt']}\n\nExtraits documentaires locaux :\n{c_block}\n\nRAPPEL : Adopte rigoureusement la posture sélectionnée."
         
         with st.chat_message("assistant"):
-            with st.spinner("Réflexion socratique…"):
+            with st.spinner("Réflexion en cours…"):
                 res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": sys_p}] + history[-10:], temperature=mode_info["temp"])
                 ans_txt = res.choices[0].message.content
                 st.markdown(ans_txt)
@@ -925,13 +912,13 @@ elif "Admin & Impact" in navigation_espace:
 
     col_p1, col_p2, col_p3 = st.columns(3)
     with col_p1:
-        nb_profs = st.slider("Enseignants titulaires dans l'école :", 5, 60, 25)
-        lecons_sem = st.slider("Plans de cours CUA générés / sem. :", 1, 10, 3)
+        nb_profs = st.slider("Enseignants titulaires dans l'établissement :", 5, 80, 30)
+        lecons_sem = st.slider("Plans de cours générés / sem. :", 1, 10, 3)
     with col_p2:
         nb_ea = st.slider("Auxiliaires d'enseignement (EA) :", 1, 20, 6)
-        nb_suppl = st.slider("Remplacements / suppléances par mois :", 2, 40, 12)
+        nb_suppl = st.slider("Remplacements / suppléances par mois :", 2, 50, 15)
     with col_p3:
-        nb_el = st.slider("Élèves bénéficiaires du tuteur :", 20, 500, 150, step=10)
+        nb_el = st.slider("Élèves bénéficiaires du tuteur :", 20, 600, 180, step=10)
         sess_el = st.slider("Sessions d'étayage / élève / sem. :", 1, 7, 3)
 
     gain_profs_h = (nb_profs * lecons_sem * (45 + 50)) / 60
@@ -945,10 +932,10 @@ elif "Admin & Impact" in navigation_espace:
     m1.metric("Heures économisées / prof", f"~{gain_profs_h / nb_profs:.1f} h / sem", "Moins de correction/prépa")
     m2.metric("Temps personnel école", f"{gain_total_mois:.0f} h / mois", "Heures réinvesties")
     m3.metric("Équivalent journées de travail", f"{jours_recup:.1f} jours", "Par mois d'école")
-    m4.metric("Temps d'étude élèves", f"{(nb_el * sess_el * 30 * 4) / 60:.0f} h / mois", "En immersion française")
+    m4.metric("Temps d'étude élèves", f"{(nb_el * sess_el * 30 * 4) / 60:.0f} h / mois", "Encadré et sécurisé")
 
     st.markdown("---")
-    st.success("🛡️ **Plaidoyer MTS :** Ce baromètre fournit la preuve mathématique que MTS AI protège la santé mentale des enseignants en allégeant leur charge de préparation.")
+    st.success("🛡️ **Plaidoyer MTS :** Ce baromètre fournit la preuve mathématique que MTS AI protège la santé mentale des enseignants en allégeant leur charge de préparation administrative et pédagogique.")
 
 
 # =============================================================================
@@ -997,7 +984,7 @@ elif "InfoSec & FIPPA" in navigation_espace:
         st.subheader("Journal de Traçabilité Immuable (Audit Trail)")
         logs_demo = [
             {"Horodatage": "2026-10-25 18:42:10", "Utilisateur": "Enseignant #4102", "Action": "Génération Leçon Bio 40S", "Statut FIPPA": "Vérifié (Zéro PII)", "Hash SHA-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
-            {"Horodatage": "2026-10-25 19:05:32", "Utilisateur": "Élève (Adam)", "Action": "Question Socratique Mendel", "Statut FIPPA": "Conforme (Session Isolée)", "Hash SHA-256": "87542b827e7d60a1a9a40f02f8f902cbd3194206585634d6824a848380516200"},
+            {"Horodatage": "2026-10-25 19:05:32", "Utilisateur": "Élève (Session Anonyme)", "Action": "Question Socratique Mendel", "Statut FIPPA": "Conforme (Session Isolée)", "Hash SHA-256": "87542b827e7d60a1a9a40f02f8f902cbd3194206585634d6824a848380516200"},
             {"Horodatage": "2026-10-25 19:14:01", "Utilisateur": "Auxiliaire #108", "Action": "Consultation Briefing EA", "Statut FIPPA": "Vérifié (Données Chiffrées)", "Hash SHA-256": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"},
         ]
         st.dataframe(logs_demo, use_container_width=True)
@@ -1014,7 +1001,7 @@ elif "InfoSec & FIPPA" in navigation_espace:
 # =============================================================================
 elif "STIAM & Sandbox" in navigation_espace:
     st.title("💻 Module 5 : Tuteur STIAM & Bac à Sable de Programmation 24/7")
-    st.caption("Équité territoriale en informatique : bac à sable sécurisé et débogueur socratique pour écoles rurales")
+    st.caption("Équité territoriale en informatique : bac à sable sécurisé et débogueur socratique pour écoles urbaines et rurales")
 
     code_init = """# Défi Informatique 40S : Calcul de la fréquence d'allèles
 def frequence_alleles(nb_dominants, nb_recessifs):
@@ -1025,7 +1012,7 @@ def frequence_alleles(nb_dominants, nb_recessifs):
 # Test
 print("Fréquence allèle dominant :", frequence_alleles(60, 40))
 """
-    code_eleve = st.text_area("Éditeur de code Python :", value=code_init, height=180, help="Saisissez ou collez votre script Python. Vous pouvez l'exécuter directement en toute sécurité.")
+    code_eleve = st.text_area("Éditeur de code Python :", value=code_init, height=180, help="Saisissez ou collez votre script Python. Vous pouvez l'exécuter directement.")
 
     col_run, col_soc = st.columns(2)
     with col_run:
@@ -1048,7 +1035,7 @@ print("Fréquence allèle dominant :", frequence_alleles(60, 40))
                     "Tu es un enseignant socratique en informatique 40S au Manitoba (MTS AI).\n"
                     f"Voici le code saisi par l'élève :\n{code_eleve}\n\n"
                     "CONSIGNE STRICTE : Ne donne pas la correction directe du code. "
-                    "Pose 1 ou 2 questions socratiques stimulantes sur la complexité algorithmique, la gestion des erreurs ou la logique mathématique."
+                    "Pose 1 ou 2 questions socratiques stimulantes sur la complexité algorithmique, la gestion des erreurs ou la structure logique."
                 )
                 res_code = client.chat.completions.create(
                     model="gpt-4o-mini",
@@ -1059,37 +1046,39 @@ print("Fréquence allèle dominant :", frequence_alleles(60, 40))
 
 
 # =============================================================================
-# MODULE 6 : SUPPLÉANCE, DAYBOOK & ERP ATRIEVE (REFONTE INTÉGRALE)
+# MODULE 6 : SUPPLÉANCE, DAYBOOK & ERP ATRIEVE (CORRIGÉ & ÉTENDU)
 # =============================================================================
-elif "Suppléance & ERP" in navigation_espace:
-    st.title("🔄 Module 6 : Cartable de Suppléance & Intégration Atrieve ERP")
-    st.caption("Génération en un clic des fiches de journée (Cycle de 6 jours ou Secondaire par périodes) et protocoles d'urgence")
+elif "Suppléance & Daybook" in navigation_espace:
+    st.title("🔄 Module 6 : Cartable de Suppléance, Daybook & Archives Terrain")
+    st.caption("Génération en un clic des fiches de journée (Cycle de 6 jours ou Secondaire par périodes) et banque d'exemplaires réels")
 
     if st.session_state.guide_interactif:
         st.markdown(
             """
             <div class="guide-box">
-                📌 <strong>Comment utiliser le Cartable de Suppléance (Daybook) :</strong><br>
-                1. <strong>Choisissez votre palier :</strong> Onglet <em>M à 8e</em> pour les classes élémentaires (Cycle manitobain de 6 jours) ou <em>Secondaire</em> pour les collèges (découpage par périodes de 75 min).<br>
-                2. <strong>Ajustez les détails :</strong> Saisissez les surveillances de cour et les consignes particulières.<br>
-                3. <strong>Cliquez sur Imprimer :</strong> Le bouton bleu ouvre directement l'aperçu propre pour insérer la feuille dans votre classeur de table physique.
+                📌 <strong>Mode d'emploi du Cartable de Suppléance :</strong><br>
+                1. <strong>Sélectionnez votre palier :</strong> Onglet <em>M à 8e</em> pour les classes élémentaires (cycle manitobain de 6 jours) ou <em>Secondaire</em> pour les collèges (découpage par périodes).<br>
+                2. <strong>Personnalisez :</strong> Vérifiez les horaires, les surveillances de cour et les consignes de classe combinée.<br>
+                3. <strong>Imprimez :</strong> Utilisez le bouton d'impression propre pour insérer la feuille dans votre classeur physique.<br>
+                4. <strong>Banque d'archives :</strong> Consultez ou alimentez l'onglet <em>Archives</em> pour stocker vos photos réelles de cartables de suppléance.
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    tab_elem, tab_sec, tab_atrieve = st.tabs([
+    tab_elem, tab_sec, tab_atrieve, tab_archive = st.tabs([
         "🎒 Cartable M à 8e (Cycle 6 Jours)",
         "🏛️ Cartable Secondaire 9e à 12e (Par Périodes)",
-        "⚡ Protocole d'Urgence Atrieve (8 h 15)"
+        "⚡ Protocole d'Urgence Atrieve (8 h 15)",
+        "🗄️ Banque de Plans Réels & Exemplaires Terrain"
     ])
 
     # -------------------------------------------------------------------------
-    # GABARIT 1 : MATERNELLE AU 8E (CYCLE DE 6 JOURS - MODÈLE SAINT-ALBERT)
+    # GABARIT 1 : MATERNELLE AU 8E (CYCLE 6 JOURS)
     # -------------------------------------------------------------------------
     with tab_elem:
         st.subheader("📋 Générateur de Daybook — Élémentaire & Intermédiaire (M à 8e)")
-        st.write("Ce modèle reproduit fidèlement la grille de classe avec le cycle de 6 jours[cite: 4, 5], les routines et la gestion multi-niveaux[cite: 7].")
+        st.write("Conçu selon les standards manitobains : cycle de 6 jours, blocs de 30 minutes et gestion des classes combinées.")
 
         col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
@@ -1098,26 +1087,27 @@ elif "Suppléance & ERP" in navigation_espace:
                 "École Pointe-des-Chênes (Sainte-Anne)",
                 "École Saint-Joachim (La Broquerie)",
                 "École Réal-Bérard (Saint-Pierre-Jolys)",
-                "École Précieux-Sang (Winnipeg)"
-            ], key="elem_ecole", help="Nom de l'école hôte apparaissant dans l'en-tête officiel.")
-            date_elem = st.text_input("Date du jour :", value="Vendredi 25 septembre", key="elem_date", help="Date de la journée de remplacement.")[cite: 6]
+                "École Précieux-Sang (Winnipeg)",
+                "École élémentaire de division anglophone"
+            ], key="elem_ecole", help="Nom de l'école apparaissant dans l'en-tête officiel.")
+            date_elem = st.text_input("Date du jour :", value="Vendredi 25 septembre", key="elem_date", help="Date de la journée de remplacement.")
         with col_e2:
             cycle_elem = st.selectbox("Jour du cycle manitobain :", [
                 "JOUR 1", "JOUR 2", "JOUR 3", "JOUR 4", "JOUR 5", "JOUR 6"
-            ], index=1, key="elem_cycle", help="Indiquez le jour officiel du cycle de 6 jours du Manitoba.")[cite: 4, 5, 6]
-            classe_elem = st.text_input("Niveau / Classe :", value="3e / 4e année combinée", key="elem_classe", help="Exemple : 5e année, ou classe multi-niveaux 3e/4e.")[cite: 7]
+            ], index=1, key="elem_cycle", help="Jour officiel du cycle de 6 jours du Manitoba.")
+            classe_elem = st.text_input("Niveau / Classe :", value="3e / 4e année combinée", key="elem_classe", help="Exemple : 4e année ou classe multi-niveaux 3e/4e.")
         with col_e3:
-            surveillance_elem = st.text_input("Surveillance récréation :", value="14 h 05 - 14 h 20 : Extérieur (Cour principale)", key="elem_surv", help="Plage de surveillance de cour assignée (apparaîtra en rouge sur la fiche).")[cite: 4, 7]
-            consigne_entree = st.text_input("Consigne d'ouverture :", value="Entrée des élèves : Ne pas laisser travailler dans les couloirs.", key="elem_entree", help="Consigne de sécurité affichée en haut de page pour le suppléant.")[cite: 4]
+            surveillance_elem = st.text_input("Surveillance récréation :", value="14 h 05 - 14 h 20 : Extérieur (Cour principale)", key="elem_surv", help="Plage de surveillance extérieure assignée au suppléant.")
+            consigne_entree = st.text_input("Consigne d'ouverture :", value="Entrée des élèves : Ne pas laisser travailler dans les couloirs.", key="elem_entree", help="Consigne de sécurité affichée en haut de page.")
 
         st.markdown("##### 📝 Détail des périodes et consignes de travail :")
         c_m1, c_m2 = st.columns(2)
         with c_m1:
-            mat_fr = st.text_area("Français / UFLI (Matin) :", value="Français : Vocabulaire 'an/en'. Cahiers d'écriture. Theo a besoin d'encouragement pour débuter.", height=85, help="Travail prévu en littératie ou phonétique.")[cite: 5, 7]
-            mat_math = st.text_area("Mathématiques (Matin) :", value="Stratégies d'addition 3 et 4. Les 3e travaillent dans les duo-tangs bleus, les 4e sur les fiches roses.", height=85, help="Consignes différenciées pour les mathématiques.")[cite: 5, 7]
+            mat_fr = st.text_area("Français / UFLI (Matin) :", value="Français : Vocabulaire 'an/en'. Cahiers d'écriture. Theo a besoin d'encouragement pour débuter.", height=85, help="Travail en littératie ou phonétique.")
+            mat_math = st.text_area("Mathématiques (Matin) :", value="Stratégies d'addition 3 et 4. Les 3e travaillent dans les duo-tangs bleus, les 4e sur les fiches roses.", height=85, help="Consignes différenciées pour les mathématiques.")
         with c_m2:
-            mat_apresmidi = st.text_area("Après-midi (Sciences / Univers social) :", value="12h35: Lecture autonome sur iPads (EPIC). 13h05: Sciences de la nature (Cahier L'École p. 12-14).", height=85, help="Activités autonomes et manuels de l'après-midi.")[cite: 4, 7]
-            mat_ela = st.text_area("E.L.A. / Clôture de journée :", value="14h20: Reading mystery 'Teacher Toads'. 15h10: Écrire les devoirs dans l'agenda et étamper.", height=85, help="Consignes d'anglais et routine de fin de classe.")[cite: 4]
+            mat_apresmidi = st.text_area("Après-midi (Sciences / Univers social) :", value="12h35: Lecture autonome sur iPads (EPIC). 13h05: Sciences de la nature (Cahier L'École p. 12-14).", height=85, help="Activités autonomes de l'après-midi.")
+            mat_ela = st.text_area("E.L.A. / Clôture de journée :", value="14h20: Reading mystery 'Teacher Toads'. 15h10: Écrire les devoirs dans l'agenda et étamper.", height=85, help="Anglais et routine de sortie.")
 
         if st.button("📄 Générer la Fiche Imprimable du Classeur (M à 8)", type="primary", use_container_width=True):
             html_elem = f"""
@@ -1206,14 +1196,14 @@ elif "Suppléance & ERP" in navigation_espace:
             </div>
             """
             st.markdown(html_elem, unsafe_allow_html=True)
-            components.html("<script>function imprimer(){ window.print(); }</script><button onclick='imprimer()' style='margin-top:12px; padding:9px 18px; background:#1e3a8a; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;'>🖨️ Imprimer la feuille pour le classeur (Format A4/Lettre)</button>", height=55)
+            components.html("<script>function imprimer(){ window.print(); }</script><button onclick='imprimer()' style='margin-top:12px; padding:9px 18px; background:#1e3a8a; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;'>🖨️ Imprimer la feuille pour le classeur (Format Lettre)</button>", height=55)
 
     # -------------------------------------------------------------------------
-    # GABARIT 2 : SECONDAIRE / COLLÈGE (9E À 12E ANNÉE - PAR PÉRIODES)
+    # GABARIT 2 : SECONDAIRE / COLLÈGE (9E À 12E ANNÉE)
     # -------------------------------------------------------------------------
     with tab_sec:
         st.subheader("🏛️ Générateur de Daybook — Secondaire / Collège (9e à 12e)")
-        st.write("Ce modèle organise la suppléance selon les grandes périodes curriculaires, les locaux de spécialité et les politiques d'école.")
+        st.write("Organisé par grandes périodes de cours, locaux de spécialité et politiques d'établissement.")
 
         col_s1, col_s2, col_s3 = st.columns(3)
         with col_s1:
@@ -1222,24 +1212,25 @@ elif "Suppléance & ERP" in navigation_espace:
                 "Collège Pierre-Elliott-Trudeau (Transcona)",
                 "Vincent Massey Collegiate (Pembina Trails)",
                 "Glenlawn Collegiate (Louis Riel SD)",
-                "École régionale Gabrielle-Roy (Île-des-Chênes)"
-            ], key="sec_ecole", help="Collège secondaire où a lieu le remplacement.")
+                "École régionale Gabrielle-Roy (Île-des-Chênes)",
+                "Autre Collegiate / High School"
+            ], key="sec_ecole", help="Établissement secondaire hôte.")
             date_sec = st.text_input("Date :", value="Lundi 28 octobre", key="sec_date")
         with col_s2:
             titulaire_sec = st.text_input("Enseignant(e) titulaire :", value="M. KHALIFA (Sciences & STIAM)", key="sec_titulaire", help="Nom du professeur remplacé.")
             local_base = st.text_input("Local d'accueil / Bureau :", value="Salle 204 (Clé au secrétariat)", key="sec_local", help="Où se rendre à l'arrivée le matin.")
         with col_s3:
-            surv_sec = st.text_input("Surveillance / Devoir de corridor :", value="11 h 30 - 11 h 50 : Cafétéria Nord", key="sec_surv", help="Plage de surveillance cafétéria ou corridor assignée au suppléant.")
-            politique_sec = st.text_input("Règles spéciales :", value="Cellulaires interdits en classe. Présences obligatoires sur PowerSchool.", key="sec_pol", help="Directives d'école sur les appareils mobiles et le portail de présences.")
+            surv_sec = st.text_input("Surveillance / Corridor :", value="11 h 30 - 11 h 50 : Cafétéria Nord", key="sec_surv", help="Plage de surveillance assignée au suppléant.")
+            politique_sec = st.text_input("Directives d'école :", value="Cellulaires interdits en classe. Présences obligatoires sur PowerSchool.", key="sec_pol", help="Règles d'établissement à rappeler.")
 
         st.markdown("##### 🔬 Contenu des Périodes du Secondaire :")
         sp_c1, sp_c2 = st.columns(2)
         with sp_c1:
-            p1_info = st.text_area("Période 1 (8h50 - 10h05) :", value="Biologie 40S (Salle 204) : Exercices génétique mendélienne p. 142. Travail autonome individuel. Adam et Sophie peuvent étayer les pairs.", height=85)
-            p2_info = st.text_area("Période 2 (10h15 - 11h30) :", value="Informatique 40S (Labo STIAM 108) : Défi Python sur les fonctions. Ouvrir le bac à sable MTS AI. Aucun accès aux jeux vidéo.", height=85)
+            p1_info = st.text_area("Période 1 (8h50 - 10h05) :", value="Biologie 40S (Salle 204) : Exercices génétique mendélienne p. 142. Travail autonome individuel.", height=85)
+            p2_info = st.text_area("Période 2 (10h15 - 11h30) :", value="Informatique 40S (Labo STIAM 108) : Défi Python sur les fonctions. Ouvrir le bac à sable MTS AI.", height=85)
         with sp_c2:
-            p3_info = st.text_area("Période 3 (12h35 - 13h50) :", value="Mathématiques Pré-calcul 30S (Salle 204) : Chapitre 4 (Trigonométrie). Feuille d'exercices laissée sur le bureau.", height=85)
-            p4_info = st.text_area("Période 4 (14h00 - 15h15) :", value="Période de préparation / Remplacement interne assigné par la direction. Se présenter au secrétariat si disponible.", height=85)
+            p3_info = st.text_area("Période 3 (12h35 - 13h50) :", value="Mathématiques Pré-calcul 30S (Salle 204) : Chapitre 4 (Trigonométrie). Feuilles d'exercices sur le bureau.", height=85)
+            p4_info = st.text_area("Période 4 (14h00 - 15h15) :", value="Période de préparation / Remplacement interne assigné par la direction. Se présenter au secrétariat.", height=85)
 
         if st.button("📄 Générer la Fiche Imprimable du Collège (9e à 12e)", type="primary", use_container_width=True):
             html_sec = f"""
@@ -1307,10 +1298,10 @@ elif "Suppléance & ERP" in navigation_espace:
             </div>
             """
             st.markdown(html_sec, unsafe_allow_html=True)
-            components.html("<script>function imprimerSec(){ window.print(); }</script><button onclick='imprimerSec()' style='margin-top:12px; padding:9px 18px; background:#0f172a; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;'>🖨️ Imprimer la fiche Collège (Format A4/Lettre)</button>", height=55)
+            components.html("<script>function imprimerSec(){ window.print(); }</script><button onclick='imprimerSec()' style='margin-top:12px; padding:9px 18px; background:#0f172a; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;'>🖨️ Imprimer la fiche Collège (Format Lettre)</button>", height=55)
 
     # -------------------------------------------------------------------------
-    # TAB 3 : PROTOCOLE D'URGENCE ATRIEVE ERP (GÉNÉRATION IA À 8 H 15)
+    # GABARIT 3 : PROTOCOLE ATRIEVE (8 H 15)
     # -------------------------------------------------------------------------
     with tab_atrieve:
         st.subheader("⚡ Synthèse Express Atrieve ERP (Prêt à 8 h 15)")
@@ -1350,6 +1341,49 @@ elif "Suppléance & ERP" in navigation_espace:
                 )
                 res_sub = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": p_sub}], temperature=0.3)
                 st.markdown(res_sub.choices[0].message.content)
+
+    # -------------------------------------------------------------------------
+    # NOUVEAU GABARIT 4 : BANQUE D'ARCHIVES DES PLANS RÉELS DE SUPPLÉANCE
+    # -------------------------------------------------------------------------
+    with tab_archive:
+        st.subheader("🗄️ Banque de Plans Réels & Exemplaires Terrain (Daybooks)")
+        st.write(
+            "Ce répertoire local stocke les photos et documents de vrais classeurs de suppléance récoltés sur le terrain "
+            "(ex. École Saint-Albert, Collège Louis-Riel). Ces données alimentent le modèle pour affiner les grilles automatiques."
+        )
+
+        col_up_arc, col_info_arc = st.columns([2, 1])
+        with col_up_arc:
+            uploaded_daybooks = st.file_uploader(
+                "Ajouter des photos ou scans de cartables de classe (JPG, PNG, PDF) :",
+                type=["png", "jpg", "jpeg", "pdf"],
+                accept_multiple_files=True,
+                help="Les fichiers sont enregistrés localement dans documents/daybooks_archive/"
+            )
+            if uploaded_daybooks:
+                for f in uploaded_daybooks:
+                    file_dest = DAYBOOKS_DIR / f.name
+                    with open(file_dest, "wb") as buffer:
+                        buffer.write(f.getbuffer())
+                st.success(f"✅ {len(uploaded_daybooks)} plan(s) ajouté(s) à la bibliothèque locale !")
+
+        with col_info_arc:
+            fichiers_archives = list(DAYBOOKS_DIR.glob("*.*"))
+            st.metric("Plans archivés en local", len(fichiers_archives), "Répertoire terrain")
+
+        st.markdown("---")
+        st.markdown("##### 📂 Bibliothèque des cartables réels répertoriés :")
+        if fichiers_archives:
+            cols_img = st.columns(3)
+            for i, p_file in enumerate(fichiers_archives):
+                with cols_img[i % 3]:
+                    st.caption(f"📄 **{p_file.name}**")
+                    if p_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                        st.image(str(p_file), use_container_width=True)
+                    else:
+                        st.info("Document PDF stocké")
+        else:
+            st.info("Aucun plan déposé pour l'instant. Déposez vos photos pour constituer la base d'apprentissage locale.")
 
 
 # =============================================================================
@@ -1399,14 +1433,14 @@ elif "Portail Parents" in navigation_espace:
         st.write("• **Anglais 40S** : Argumentation littéraire structurée avec autonomie.")
     with t_binome:
         st.info("🔒 Projets en binôme : chaque travail d'équipe requiert l'autorisation préalable du parent ou tuteur légal.")
-        st.write("🔬 **Laboratoire d'hérédité mendélienne — En binôme avec Marc L.**")
+        st.write("🔬 **Laboratoire d'hérédité mendélienne — Travail d'équipe**")
         st.progress(70, text="Progression du dossier : 70%")
         st.checkbox("Étape 1 : Hypothèses et protocoles de recherche (Validé)", value=True, disabled=True)
         st.checkbox("Étape 2 : Recueil des données de croisement (Validé)", value=True, disabled=True)
         st.checkbox("Étape 3 : Révision finale avec le tuteur socratique", value=False)
         st.write("📍 **Coordination logistique :** Séance de révision partagée prévue à la bibliothèque le mercredi à 16 h 30.")
     with t_liaison:
-        st.success("💡 **Note de l'équipe :** Adam fait preuve d'une excellente assiduité socratique en français. Encouragez-le à continuer !")
+        st.success("💡 **Note de l'équipe :** L'élève fait preuve d'une excellente assiduité réflexive. Poursuivez dans cette dynamique !")
 
 
 # =============================================================================
@@ -1417,8 +1451,8 @@ elif "Lab Phénomènes" in navigation_espace:
     st.caption("Pédagogie transdisciplinaire inspirée de la Finlande : Enquêtes complexes ancrées dans le territoire manitobain")
 
     st.write(
-        "Ce module brise les frontières traditionnelles entre matières pour proposer une **enquête immersive**. "
-        "Les élèves mobilisent simultanément les sciences, les mathématiques, l'histoire et le français autour d'un défi réel du Manitoba."
+        "Ce module décloisonne les matières pour proposer une **enquête immersive**. "
+        "Les élèves mobilisent simultanément les sciences, les mathématiques, l'histoire et les langues autour d'un grand défi réel du Manitoba."
     )
 
     phenomene_choisi = st.selectbox(

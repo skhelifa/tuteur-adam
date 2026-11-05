@@ -32,10 +32,9 @@ COURSES = {
             "biologie moléculaire, écologie ou mécanismes de l'évolution ?"
         ),
         "system": """
-Tu es le tuteur socratique de niveau provincial pour le cours de Biologie 40S (12e année) au Manitoba (BEF / Manitoba Education standards).
-APPROCHE : Enseigne avec rigueur, bienveillance et clarté. Ne donne jamais la solution finale directement.
-Pose une seule question d'étayage à la fois, utilise des indices gradués et stimule la démarche scientifique de l'élève.
-S'adapte automatiquement à la langue choisie par l'élève (Français ou Anglais).
+Tu es le tuteur de niveau provincial pour le cours de Biologie 40S (12e année) au Manitoba (BEF / Manitoba Education).
+Enseigne avec rigueur, bienveillance et clarté sans jamais donner la solution brute directement.
+Adapte-toi scrupuleusement à la posture pédagogique choisie (Socratique classique, Co-enquête finlandaise, ou Auto-réflexion japonaise Hansei).
 """,
     },
     "Computer Science 40S / STIAM": {
@@ -45,8 +44,8 @@ S'adapte automatiquement à la langue choisie par l'élève (Français ou Anglai
             "Quels algorithmes, structures de données ou projets de codage abordons-nous ?"
         ),
         "system": """
-Tu es le tuteur socratique en sciences computationnelles et STIAM pour les écoles du Manitoba (MTS AI).
-Guide l'élève dans l'analyse de ses algorithmes et la résolution de ses bogues logiques sans écrire le code à sa place.
+Tu es le tuteur en sciences computationnelles et STIAM pour les écoles du Manitoba (MTS AI).
+Guide l'élève dans l'analyse de ses algorithmes et la résolution de ses bogues sans écrire le code à sa place.
 """,
     },
     "English — Comprehensive Focus 40S": {
@@ -56,9 +55,8 @@ Guide l'élève dans l'analyse de ses algorithmes et la résolution de ses bogue
             "Would you like to work on critical text analysis, essay synthesis, or persuasive writing today?"
         ),
         "system": """
-You are the Socratic writing and analytical mentor for Manitoba Grade 12 English (Comprehensive Focus 40S).
-Guide the student methodically through thesis formulation, evidence synthesis, and rhetorical style step-by-step.
-Do not write essays for the student; ask thoughtful prompting questions.
+You are the writing and analytical mentor for Manitoba Grade 12 English (Comprehensive Focus 40S).
+Guide the student methodically through thesis formulation, evidence synthesis, and rhetorical style.
 """,
     },
     "Cinema — Witness to Modern History 40S": {
@@ -76,52 +74,101 @@ Guide l'élève à décoder la mise en scène, le contexte sociopolitique et la 
 
 CONTEXT_MODES = {
     "🎓 Standard Socratique (Consolidation)": {
+        "badge": "🎓 Socratique classique : Questionnement méthodique pas-à-pas",
         "prompt": "MÉTHODE SOCRATIQUE CLASSIQUE : Pose UNE SEULE question à la fois. Offre des indices gradués sans donner la réponse brute.",
         "temp": 0.4,
+        "buttons": [
+            ("📖 Expliquer simplement", "Peux-tu m'expliquer cette notion plus simplement avec une analogie visuelle claire ?"),
+            ("📝 Exemple manitobain", "Donne-moi un exemple concret issu du quotidien ou du territoire manitobain."),
+            ("🎥 Vidéo illustrative", "Propose un mot-clé précis ou une ressource visuelle pour explorer ce concept."),
+            ("🚀 Défi supérieur", "Comment ce concept se relie-t-il à un problème scientifique plus complexe ?")
+        ]
     },
     "🇫🇮 Co-Enquête & Autonomie Active (Modèle Finlandais)": {
+        "badge": "🇫🇮 Modèle Finlandais : Co-recherche active & exploration de terrain",
         "prompt": (
-            "POSTURE MODÈLE FINLANDAIS (Inquiry-Based Learning) : Agis comme un co-chercheur et facilitateur. "
-            "Encourage l'élève à formuler ses propres questions, à tester des hypothèses pratiques et à faire des liens "
-            "avec des phénomènes réels de sa communauté. Favorise une autonomie chaleureuse et la confiance en soi."
+            "POSTURE MODÈLE FINLANDAIS (Inquiry-Based Learning) : Agis comme un co-chercheur et facilitateur horizontal. "
+            "Encourage l'élève à formuler ses propres hypothèses, à tester des solutions ouvertes et à faire des liens "
+            "avec des phénomènes réels et sociétaux. Ne le teste pas : explore AVEC lui avec confiance et liberté intellectuelle."
         ),
         "temp": 0.5,
+        "buttons": [
+            ("🔬 Poser une hypothèse", "Si je devais formuler une hypothèse de départ sur ce problème, comment pourrions-nous la tester ?"),
+            ("🌲 Ancrage terrain Manitoba", "Comment ce défi se manifeste-t-il concrètement dans l'environnement ou les communautés du Manitoba ?"),
+            ("🤝 Piste de co-recherche", "Quelles sous-questions d'enquête devrions-nous investiguer ensemble pour avancer ?"),
+            ("💡 Solutions alternatives", "Quelles autres approches créatives ou non conventionnelles pourrions-nous explorer ?")
+        ]
     },
     "🇯🇵 Mimamoru & Hansei (Modèle Japonais - Autocorrection)": {
+        "badge": "🇯🇵 Modèle Japonais : Mimamoru (Observation bienveillante) & Hansei (Auto-évaluation)",
         "prompt": (
-            "POSTURE MODÈLE JAPONAIS (Mimamoru & Hansei) : Observe la pensée de l'élève avec une grande courtoisie sans intervenir brutalement. "
-            "Si l'élève fait une erreur, ne la sanctionne pas : demande-lui poliment d'expliciter chaque maillon de sa démarche "
-            "pour qu'il expérimente le Hansei (auto-réflexion introspective) et découvre lui-même sa propre correction."
+            "POSTURE MODÈLE JAPONAIS (Mimamoru & Hansei) : Observe le cheminement de l'élève avec une extrême politesse sans le brusquer. "
+            "Même s'il se trompe, ne dis pas 'c'est faux'. Demande-lui de relire calmement son enchaînement logique "
+            "afin qu'il pratique le Hansei (introspection critique constructive) et identifie par lui-même la subtilité manquante."
         ),
         "temp": 0.3,
+        "buttons": [
+            ("🪞 Miroir Hansei", "Aide-moi à réexaminer calmement chaque étape de ma démarche pour vérifier où se situe mon hésitation."),
+            ("🧩 Décortiquer l'étape clé", "Regardons de plus près le point central de mon raisonnement sans jugement."),
+            ("🎯 Critère d'auto-vérification", "Quel repère ou calcul témoin puis-je appliquer pour confirmer moi-même ma déduction ?"),
+            ("🌱 Question d'introspection", "Quelle question réflexive peux-tu me poser pour m'aider à consolider ma compréhension ?")
+        ]
     },
     "🚀 Défi & Approfondissement (Élèves avancés)": {
+        "badge": "🚀 Enrichissement : Taxonomie de Bloom supérieure & pensée critique",
         "prompt": (
-            "POSTURE ENRICHISSEMENT : Hausse l'exigence conceptuelle (Taxonomie de Bloom supérieure). "
+            "POSTURE ENRICHISSEMENT : Hausse l'exigence conceptuelle. "
             "Propose des contre-exemples stimulants, teste la solidité argumentative et relie les notions à la recherche actuelle."
         ),
         "temp": 0.4,
+        "buttons": [
+            ("⚡ Contre-exemple rigoureux", "Peux-tu me soumettre un contre-exemple scientifique pour tester les limites de cette théorie ?"),
+            ("🌐 Recherche contemporaine", "Quel lien existe-t-il entre cette notion de 12e année et la recherche universitaire de pointe ?"),
+            ("🧩 Problème ouvert", "Propose-moi un problème complexe où plusieurs interprétations s'affrontent."),
+            ("📐 Démonstration formelle", "Comment formaliser ce principe de manière rigoureuse mathématiquement ?")
+        ]
     },
     "❄️ Grand Froid & Tempête (Continuité Blizzard)": {
+        "badge": "❄️ Continuité Tempête : Préservation chaleureuse du lien d'apprentissage",
         "prompt": (
             "POSTURE TEMPÊTE & BLIZZARD (MTS) : Ton particulièrement chaleureux, rassurant et interactif. "
             "Maintiens le sentiment d'appartenance et brise l'isolement de l'élève connecté depuis la maison lors d'une fermeture d'école."
         ),
         "temp": 0.5,
+        "buttons": [
+            ("☕ Pause météo & réconfort", "Faisons une courte pause : une anecdote scientifique captivante pour se détendre à la maison ?"),
+            ("📖 Résumé clair", "Fais-moi un récapitulatif ultra-clair de l'essentiel à retenir aujourd'hui."),
+            ("🎯 Défi blizzard", "Donne-moi une énigme amusante liée à notre sujet pour stimuler ma réflexion."),
+            ("✅ Bilan d'étape", "Vérifions rapidement si j'ai bien saisi les 2 points incontournables.")
+        ]
     },
     "⏱️ Examen Provincial 40S (Simulation BEF / Manitoba)": {
+        "badge": "⏱️ Standard Examen : Barème ministériel & rigueur formelle 12e année",
         "prompt": (
             "POSTURE EXAMINATEUR PROVINCIAL : Évalue formellement selon les barèmes ministériels de 12e année. "
             "Mesure la précision de la terminologie scientifique, la clarté du raisonnement et chiffre le barème."
         ),
         "temp": 0.2,
+        "buttons": [
+            ("📝 Barème ministériel", "Comment cette question serait-elle découpée et notée sur un examen provincial officiel ?"),
+            ("⚠️ Piège fréquent", "Quelle est l'erreur ou l'imprécision de terminologie la plus courante commise par les élèves ?"),
+            ("🔍 Évaluation de ma réponse", "Voici ma tentative : peux-tu l'évaluer selon les critères d'excellence du BEF ?"),
+            ("⏱️ Question chronométrée", "Pose-moi une question type examen avec un temps indicatif de résolution.")
+        ]
     },
     "🌍 Francisation & Accueil (Inclusion)": {
+        "badge": "🌍 Francisation & Inclusion : Syntaxe aérée & repères bilingues",
         "prompt": (
             "POSTURE FRANCISATION & ACCUEIL : Vocabulaire clair, phrases limpides, mise entre parenthèses des termes techniques "
             "et repères bilingues d'appoint si nécessaire pour les nouveaux arrivants."
         ),
         "temp": 0.3,
+        "buttons": [
+            ("📖 Vocabulaire illustré", "Peux-tu reformuler les mots difficiles en donnant des synonymes simples ?"),
+            ("🌐 Mot équivalent en anglais", "Quel est l'équivalent terminologique de cette notion en anglais ?"),
+            ("🧩 Étape par étape", "Découpe l'explication en 3 petites étapes très courtes et simples."),
+            ("🗣️ Répétition d'exemple", "Donne-moi un autre exemple très concret avec des mots du quotidien.")
+        ]
     },
 }
 
@@ -131,7 +178,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS pour l'Accueil Prestige & Balises de Guidage MTS AI
+# Style CSS Haute Visibilité & Postures Pédagogiques
 st.markdown(
     """
     <style>
@@ -139,54 +186,54 @@ st.markdown(
             background: linear-gradient(135deg, #091326 0%, #0f274a 55%, #1b3d6d 100%);
             border: 1px solid rgba(255, 255, 255, 0.14);
             border-radius: 18px;
-            padding: 32px;
-            margin-bottom: 25px;
+            padding: 26px 30px;
+            margin-bottom: 22px;
             box-shadow: 0 14px 35px -10px rgba(0, 0, 0, 0.6);
         }
         .hero-title {
-            font-size: 2.35rem;
+            font-size: 2.2rem;
             font-weight: 800;
             color: #f8fafc;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             display: flex;
             align-items: center;
             gap: 12px;
             letter-spacing: -0.5px;
         }
         .hero-subtitle {
-            font-size: 1.05rem;
+            font-size: 1rem;
             color: #94a3b8;
-            margin-bottom: 20px;
-            line-height: 1.55;
+            margin-bottom: 16px;
+            line-height: 1.5;
         }
         .tag-pill {
             display: inline-block;
             background: rgba(234, 179, 8, 0.15);
             color: #facc15;
             border: 1px solid rgba(234, 179, 8, 0.35);
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 9999px;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 600;
-            margin-right: 8px;
+            margin-right: 6px;
         }
         .tag-pill-blue {
             display: inline-block;
             background: rgba(59, 130, 246, 0.16);
             color: #60a5fa;
             border: 1px solid rgba(59, 130, 246, 0.35);
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 9999px;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 600;
-            margin-right: 8px;
+            margin-right: 6px;
         }
         .module-card {
             background: rgba(255, 255, 255, 0.035);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 14px;
-            padding: 18px;
-            min-height: 180px;
+            padding: 16px;
+            min-height: 170px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -198,51 +245,62 @@ st.markdown(
             background: rgba(255, 255, 255, 0.06);
         }
         .module-card h4 {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #f1f5f9;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .module-card p {
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             color: #94a3b8;
-            line-height: 1.4;
-            margin-bottom: 8px;
+            line-height: 1.35;
+            margin-bottom: 6px;
         }
         .module-card small {
             color: #60a5fa;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
+        }
+        .guide-box {
+            background: #f0f7ff;
+            border: 1px solid #bfdbfe;
+            border-left: 5px solid #2563eb;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        .guide-box strong {
+            color: #0f172a;
+        }
+        .posture-banner {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.86rem;
+            color: #312e81;
+            font-weight: 600;
         }
         .guide-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
             background: rgba(59, 130, 246, 0.15);
-            color: #93c5fd;
+            color: #1d4ed8;
             border: 1px solid rgba(59, 130, 246, 0.4);
-            padding: 3px 10px;
-            border-radius: 6px;
-            font-size: 0.78rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.76rem;
             font-weight: 700;
             margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        /* --- NOUVEAU STYLE HAUTE LISIBILITÉ --- */
-.guide-box {
-    background: #f0f7ff;
-    border: 1px solid #bfdbfe;
-    border-left: 5px solid #2563eb;
-    border-radius: 6px;
-    padding: 12px 16px;
-    font-size: 0.88rem;
-    color: #1e293b;
-    margin-bottom: 18px;
-    line-height: 1.5;
-}
-.guide-box strong {
-    color: #0f172a;
-}
     </style>
     """,
     unsafe_allow_html=True
@@ -430,72 +488,84 @@ MODULES_LIST = [
     "10. 🧠 Moteur Neuro-Cognitif"
 ]
 
-# --- BARRE LATÉRALE DE CONTRÔLE MULTI-DIVISIONS ---
+# =============================================================================
+# BARRE LATÉRALE MODERNE & ÉPURÉE (MTS AI HUB)
+# =============================================================================
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/school.png", width=52)
-    st.title("MTS AI Hub")
-    st.caption("Manitoba Teachers' Society · 16 000+ Membres")
+    # 1. En-tête compact horizontal
+    c_logo, c_head = st.columns([1, 4])
+    with c_logo:
+        st.image("https://img.icons8.com/fluency/96/school.png", width=42)
+    with c_head:
+        st.markdown("<h3 style='margin:0; font-size:1.2rem; font-weight:800;'>MTS AI Hub</h3>", unsafe_allow_html=True)
+        st.caption("Manitoba Teachers' Society · 16k+")
 
-    # Profil Institutionnel Provincial
-    st.markdown("### 🏛️ Division & Langue")
-    div_locale = st.selectbox(
-        "Division scolaire :",
-        [
-            "DSFM (Division scolaire franco-manitobaine)",
-            "Winnipeg School Division (WSD #1)",
-            "Pembina Trails School Division",
-            "Louis Riel School Division (LRSD)",
-            "St. James-Assiniboia School Division",
-            "River East Transcona School Division",
-            "Brandon School Division",
-            "Autre division scolaire manitobaine"
-        ],
-        help="Adapte le profil curriculaire, les conventions et les flux administratifs selon votre division."
-    )
-    langue_choisie = st.radio("Langue de l'espace :", ["Français (Immersion & Français langue première)", "English (Standard)"], horizontal=True)
+    st.markdown("<hr style='margin:8px 0;'>", unsafe_allow_html=True)
 
+    # 2. Navigation Principale
     default_idx = MODULES_LIST.index(st.session_state.nav_active) if st.session_state.nav_active in MODULES_LIST else 0
     navigation_espace = st.radio(
         "Navigation Systémique :",
         MODULES_LIST,
-        index=default_idx
+        index=default_idx,
+        label_visibility="collapsed"
     )
     st.session_state.nav_active = navigation_espace
 
-    st.markdown("---")
-    st.markdown("### 📚 Matière & Pédagogie")
-    course_name = st.selectbox(
-        "Matière / Programme :",
-        list(COURSES.keys()),
-        help="Choix du programme de cours manitobain indexé."
-    )
-    course = COURSES[course_name]
-    folder = DOCS_DIR / course["folder"]
+    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
 
-    mode_selectionne = st.selectbox(
-        "Posture d'apprentissage :",
-        list(CONTEXT_MODES.keys()),
-        help="Choisissez le modèle pédagogique : Socratique, Modèle Finlandais d'investigation ou Modèle Japonais d'auto-réflexion."
-    )
-    mode_info = CONTEXT_MODES[mode_selectionne]
+    # 3. Volet Matière & Posture (Déroulé par défaut)
+    with st.expander("📚 Matière & Pédagogie", expanded=True):
+        course_name = st.selectbox(
+            "Programme actif :",
+            list(COURSES.keys()),
+            help="Choix du programme manitobain indexé."
+        )
+        course = COURSES[course_name]
+        folder = DOCS_DIR / course["folder"]
 
-    st.markdown("---")
-    st.markdown("### 🧭 Balises d'Accompagnement")
-    guide_toggle = st.toggle(
-        "Activer le Mode Guidé (Repères)",
-        value=st.session_state.guide_interactif,
-        help="Affiche des badges étape par étape et des encadrés conseils dans chaque module."
-    )
-    st.session_state.guide_interactif = guide_toggle
+        mode_selectionne = st.selectbox(
+            "Posture réflexive :",
+            list(CONTEXT_MODES.keys()),
+            help="Modèle pédagogique : Socratique, Modèle Finlandais (Co-enquête) ou Modèle Japonais (Hansei)."
+        )
+        mode_info = CONTEXT_MODES[mode_selectionne]
 
-    st.markdown("---")
-    st.markdown("### 🔊 Dictée & Voix")
-    enable_voice_output = st.checkbox("Synthèse vocale active", value=True)
-    if st.button("🛑 Couper la voix", use_container_width=True):
-        stop_speech()
-        st.success("Voix coupée.")
+    # 4. Volet Division Scolaire & Accessibilité
+    with st.expander("🏛️ Division & Accessibilité", expanded=False):
+        div_locale = st.selectbox(
+            "Division scolaire :",
+            [
+                "DSFM (Division scolaire franco-manitobaine)",
+                "Winnipeg School Division (WSD #1)",
+                "Pembina Trails School Division",
+                "Louis Riel School Division (LRSD)",
+                "St. James-Assiniboia School Division",
+                "River East Transcona School Division",
+                "Brandon School Division",
+                "Autre division scolaire manitobaine"
+            ]
+        )
+        langue_choisie = st.radio(
+            "Langue :",
+            ["Français (BEF/Immersion)", "English (Standard)"],
+            horizontal=True
+        )
+        guide_toggle = st.toggle(
+            "Mode Guidé (Repères)",
+            value=st.session_state.guide_interactif,
+            help="Affiche les balises d'étayage sur chaque écran."
+        )
+        st.session_state.guide_interactif = guide_toggle
 
-    audio_value = st.audio_input("Dictée vocale directe (Whisper)")
+    # 5. Volet Audio & Whisper
+    with st.expander("🎙️ Outils Vocaux & Dictée", expanded=False):
+        enable_voice_output = st.checkbox("Synthèse vocale active", value=True)
+        if st.button("🛑 Couper la voix", use_container_width=True):
+            stop_speech()
+            st.success("Voix coupée.")
+        st.caption("Dictée Whisper en direct :")
+        audio_value = st.audio_input("Dictée vocale", label_visibility="collapsed")
 
 
 # =============================================================================
@@ -507,9 +577,9 @@ if "Accueil" in navigation_espace:
         <div class="hero-container">
             <div class="hero-title">
                 <span>MTS AI</span>
-                <span style="font-size: 2.2rem;">🦬</span>
-                <span style="font-size: 1.8rem;">🌾</span>
-                <span style="font-size: 1.8rem;">⚜️</span>
+                <span style="font-size: 2.1rem;">🦬</span>
+                <span style="font-size: 1.7rem;">🌾</span>
+                <span style="font-size: 1.7rem;">⚜️</span>
             </div>
             <div class="hero-subtitle">
                 Infrastructure d'Intelligence Artificielle Souveraine, Équitable & Pédagogique<br>
@@ -518,8 +588,8 @@ if "Accueil" in navigation_espace:
             <div>
                 <span class="tag-pill">🏛️ Écosystème Provincial des 10 Modules</span>
                 <span class="tag-pill">🔒 Souveraineté & Protection FIPPA</span>
-                <span class="tag-pill-blue">🇫🇮 Inspiration Finlande (PhBL)</span>
-                <span class="tag-pill-blue">🇯🇵 Modèle Japon (Hansei/Métacognition)</span>
+                <span class="tag-pill-blue">🇫🇮 Modèle Finlande (PhBL)</span>
+                <span class="tag-pill-blue">🇯🇵 Modèle Japon (Hansei)</span>
                 <span class="tag-pill-blue">⏱️ Prévention de l'Épuisement MTS</span>
             </div>
         </div>
@@ -532,9 +602,9 @@ if "Accueil" in navigation_espace:
             f"""
             <div class="guide-box">
                 👋 <strong>Bienvenue au Hub MTS AI pour : {div_locale} !</strong><br>
-                • <strong>Pour planifier :</strong> Le <em>Module 1</em> génère des leçons CUA complètes et le <em>Module 6</em> génère votre cartable de suppléance imprimable.<br>
-                • <strong>Pour les élèves :</strong> Le <em>Module 2</em> fournit un tuteur socratique qui favorise l'effort intellectuel sans donner de réponses toutes faites.<br>
-                • <strong>Pour l'administration :</strong> Le <em>Module 3</em> mesure l'allègement concret de la tâche enseignante (heures récupérées par semaine).
+                • <strong>Pour planifier :</strong> Le <em>Module 1</em> conçoit des leçons CUA complètes et le <em>Module 6</em> génère votre cartable de suppléance imprimable.<br>
+                • <strong>Pour les élèves :</strong> Le <em>Module 2</em> fournit un tuteur adaptatif (Socratique, Modèle Finlandais ou Japonais).<br>
+                • <strong>Pour l'administration :</strong> Le <em>Module 3</em> chiffre le gain hebdomadaire concret en heures de préparation évitées.
             </div>
             """,
             unsafe_allow_html=True
@@ -557,7 +627,7 @@ if "Accueil" in navigation_espace:
             st.rerun()
 
     with r1_c2:
-        st.markdown("""<div class="module-card"><div><h4>🎓 2. Tuteur Socratique</h4><p>Accompagnement bienveillant, quiz 10 questions et schémas scientifiques RAG.</p></div><small>Public : Élèves 40S / K-12</small></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="module-card"><div><h4>🎓 2. Tuteur Socratique</h4><p>Accompagnement réflexif, quiz 10 questions et schémas scientifiques RAG.</p></div><small>Public : Élèves 40S / K-12</small></div>""", unsafe_allow_html=True)
         if st.button("Ouvrir 2 ➔", key="btn_m2", use_container_width=True):
             st.session_state.nav_active = "2. 🎓 Tuteur Socratique"
             st.rerun()
@@ -745,22 +815,33 @@ elif "Assistant BEF" in navigation_espace:
 
 
 # =============================================================================
-# MODULE 2 : TUTEUR SOCRATIQUE (ÉLÈVE)
+# MODULE 2 : TUTEUR SOCRATIQUE (RÉACTIF AUX MODES FINLANDAIS & JAPONAIS)
 # =============================================================================
 elif "Tuteur Socratique" in navigation_espace:
-    st.title(f"🎓 Module 2 : Tuteur Socratique MTS AI — {course_name}")
-    st.caption("Accompagnement réflexif bienveillant · Pédagogie de questionnement sans réponse brute")
+    st.title(f"🎓 Module 2 : Tuteur MTS AI — {course_name}")
+    st.caption("Accompagnement réflexif adapté · Modèles d'investigation et d'auto-évaluation internationale")
 
-    # Personnalisation universelle du prénom de l'élève
+    # 1. Bandeau de Posture Dynamique (Changement visuel immédiat selon le mode choisi)
+    st.markdown(
+        f"""
+        <div class="posture-banner">
+            <span>{mode_info['badge']}</span>
+            <span style="font-size:0.78rem; opacity:0.85;">Division : {div_locale.split('(')[0].strip()}</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # 2. Personnalisation universelle du prénom
     c_nom1, c_nom2 = st.columns([2, 1])
     with c_nom1:
         if st.session_state.guide_interactif:
             st.markdown(
                 """
                 <div class="guide-box">
-                    👋 <strong>Bienvenue dans votre espace d'apprentissage !</strong><br>
-                    • <strong>Principe :</strong> Le tuteur socratique ne vous donne pas la solution directement ; il vous aide à structurer votre propre réflexion.<br>
-                    • <strong>Comment participer :</strong> Écrivez votre réponse ci-dessous ou dictez-la avec le microphone dans la barre latérale.
+                    👋 <strong>Espace d'apprentissage autonome :</strong><br>
+                    • Le tuteur adapte son style selon la posture active choisie dans la barre latérale.<br>
+                    • Utilisez les <strong>boutons d'étayage rapide</strong> sous les réponses de l'IA pour rebondir en un clic.
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -798,22 +879,15 @@ elif "Tuteur Socratique" in navigation_espace:
             if msg["role"] == "assistant" and idx == len(history) - 1 and enable_voice_output:
                 speak_text(msg["content"])
 
+        # Boutons d'étayage DYNAMIQUES selon le mode sélectionné
         if msg["role"] == "assistant" and idx == len(history) - 1:
-            st.markdown("💡 **Suggestions d'étayage rapide :**")
-            c1, c2, c3, c4 = st.columns(4)
+            st.markdown(f"💡 **Rebonds guidés ({mode_selectionne.split('(')[0].strip()}) :**")
+            b_cols = st.columns(4)
             b_q = None
-            with c1:
-                if st.button("📖 Expliquer plus simplement", key=f"s1_{idx}", use_container_width=True):
-                    b_q = "Peux-tu m'expliquer cette idée plus simplement avec une analogie visuelle claire ?"
-            with c2:
-                if st.button("📝 Exemple concret manitobain", key=f"s2_{idx}", use_container_width=True):
-                    b_q = "Donne-moi un exemple concret issu du quotidien ou de la nature au Manitoba."
-            with c3:
-                if st.button("🎥 Vidéo illustrative", key=f"s3_{idx}", use_container_width=True):
-                    b_q = "Propose un lien YouTube ou une ressource visuelle pour explorer ce concept."
-            with c4:
-                if st.button("🚀 Relever un défi supérieur", key=f"s4_{idx}", use_container_width=True):
-                    b_q = "Comment ce concept se relie-t-il à un problème scientifique plus complexe ?"
+            for b_idx, (b_label, b_prompt_text) in enumerate(mode_info["buttons"]):
+                with b_cols[b_idx]:
+                    if st.button(b_label, key=f"btn_mode_{b_idx}_{idx}", use_container_width=True):
+                        b_q = b_prompt_text
             if b_q:
                 st.session_state.next_question = b_q
                 st.rerun()
@@ -883,7 +957,7 @@ elif "Tuteur Socratique" in navigation_espace:
                 st.session_state.next_question = c_txt.strip()
                 st.rerun()
 
-    typed_q = st.chat_input("Posez votre question ici…")
+    typed_q = st.chat_input("Posez votre question ou proposez une piste ici…")
     active_q = typed_q or st.session_state.pop("next_question", None)
     if active_q and active_q.strip():
         active_q = active_q.strip()
@@ -894,11 +968,21 @@ elif "Tuteur Socratique" in navigation_espace:
         all_c = load_pdf_chunks(str(folder))
         rel_c = retrieve_chunks(active_q, all_c)
         c_block = "\n\n".join(f"[{c['source']}]\n{c['text']}" for c in rel_c) if rel_c else "Programme général provincial."
-        sys_p = f"{course['system']}\n\nDivision scolaire active : {div_locale}\n\nPosture demandée :\n{mode_info['prompt']}\n\nExtraits documentaires locaux :\n{c_block}\n\nRAPPEL : Adopte rigoureusement la posture sélectionnée."
+        sys_p = (
+            f"{course['system']}\n\n"
+            f"Division scolaire active : {div_locale}\n\n"
+            f"POSTURE PÉDAGOGIQUE IMPOSÉE :\n{mode_info['prompt']}\n\n"
+            f"Extraits documentaires locaux :\n{c_block}\n\n"
+            "RAPPEL : Incarne fidèlement cette posture dans ta réponse."
+        )
         
         with st.chat_message("assistant"):
             with st.spinner("Réflexion en cours…"):
-                res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": sys_p}] + history[-10:], temperature=mode_info["temp"])
+                res = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "system", "content": sys_p}] + history[-10:],
+                    temperature=mode_info["temp"]
+                )
                 ans_txt = res.choices[0].message.content
                 st.markdown(ans_txt)
                 history.append({"role": "assistant", "content": ans_txt})
@@ -1051,7 +1135,7 @@ print("Fréquence allèle dominant :", frequence_alleles(60, 40))
 
 
 # =============================================================================
-# MODULE 6 : SUPPLÉANCE, DAYBOOK & ERP ATRIEVE (CORRIGÉ & ÉTENDU)
+# MODULE 6 : SUPPLÉANCE, DAYBOOK & ERP ATRIEVE
 # =============================================================================
 elif "Suppléance & Daybook" in navigation_espace:
     st.title("🔄 Module 6 : Cartable de Suppléance, Daybook & Archives Terrain")
@@ -1348,7 +1432,7 @@ elif "Suppléance & Daybook" in navigation_espace:
                 st.markdown(res_sub.choices[0].message.content)
 
     # -------------------------------------------------------------------------
-    # NOUVEAU GABARIT 4 : BANQUE D'ARCHIVES DES PLANS RÉELS DE SUPPLÉANCE
+    # GABARIT 4 : BANQUE D'ARCHIVES DES PLANS RÉELS DE SUPPLÉANCE
     # -------------------------------------------------------------------------
     with tab_archive:
         st.subheader("🗄️ Banque de Plans Réels & Exemplaires Terrain (Daybooks)")

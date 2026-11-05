@@ -228,16 +228,21 @@ st.markdown(
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .guide-box {
-            background: rgba(30, 58, 138, 0.22);
-            border-left: 4px solid #3b82f6;
-            border-radius: 6px;
-            padding: 12px 16px;
-            font-size: 0.88rem;
-            color: #e2e8f0;
-            margin-bottom: 18px;
-            line-height: 1.5;
-        }
+        /* --- NOUVEAU STYLE HAUTE LISIBILITÉ --- */
+.guide-box {
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-left: 5px solid #2563eb;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    color: #1e293b;
+    margin-bottom: 18px;
+    line-height: 1.5;
+}
+.guide-box strong {
+    color: #0f172a;
+}
     </style>
     """,
     unsafe_allow_html=True

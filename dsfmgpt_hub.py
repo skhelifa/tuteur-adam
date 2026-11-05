@@ -118,7 +118,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS pour l'Accueil Prestige MTS AI
+# Style CSS pour l'Accueil Prestige & Balises de Guidage MTS AI
 st.markdown(
     """
     <style>
@@ -200,6 +200,32 @@ st.markdown(
             font-weight: 600;
             font-size: 0.75rem;
         }
+        /* Balises d'étayage visuel (Mode Guidé) */
+        .guide-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .guide-box {
+            background: rgba(30, 58, 138, 0.22);
+            border-left: 4px solid #3b82f6;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
     </style>
     """,
     unsafe_allow_html=True
@@ -259,9 +285,11 @@ def stop_speech():
     components.html("<script>window.speechSynthesis.cancel();</script>", height=0)
 
 
-# Variables d'état
+# Variables d'état & Initialisation du Guidage
 if "nav_active" not in st.session_state:
     st.session_state.nav_active = "🏠 Accueil & Vue d'Ensemble"
+if "guide_interactif" not in st.session_state:
+    st.session_state.guide_interactif = True
 if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = None
 if "quiz_submitted" not in st.session_state:
@@ -400,14 +428,33 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### 📚 Cours Actif")
-    course_name = st.selectbox("Matière :", list(COURSES.keys()))
+    course_name = st.selectbox(
+        "Matière :",
+        list(COURSES.keys()),
+        help="Sélectionnez la matière ou le curriculum manitobain sur lequel travaille le tuteur ou l'assistant."
+    )
     course = COURSES[course_name]
     folder = DOCS_DIR / course["folder"]
 
     st.markdown("---")
     st.markdown("### 🎛️ Posture Pédagogique")
-    mode_selectionne = st.selectbox("Mode contextuel :", list(CONTEXT_MODES.keys()))
+    mode_selectionne = st.selectbox(
+        "Mode contextuel :",
+        list(CONTEXT_MODES.keys()),
+        help="Ajuste la posture de l'IA : étayage socratique doux, défi supérieur, simulation d'examen ou mode tempête/blizzard."
+    )
     mode_info = CONTEXT_MODES[mode_selectionne]
+
+    st.markdown("---")
+    st.markdown("### 🧭 Aide & Balises de Guidage")
+    guide_toggle = st.toggle(
+        "Activer le Mode Guidé (Repères)",
+        value=st.session_state.guide_interactif,
+        help="Affiche des repères visuels pas-à-pas (Étape 1, 2, 3), des encadrés explicatifs et des conseils de saisie sur chaque module."
+    )
+    st.session_state.guide_interactif = guide_toggle
+    if guide_toggle:
+        st.info("💡 **Mode Guidé Actif** : Des balises visuelles numérotées et des infobulles vous assistent à chaque étape.")
 
     st.markdown("---")
     st.markdown("### 🔊 Audio & Dictée Whisper")
@@ -447,6 +494,20 @@ if "Accueil" in navigation_espace:
         """,
         unsafe_allow_html=True
     )
+
+    if st.session_state.guide_interactif:
+        st.markdown(
+            """
+            <div class="guide-box">
+                👋 <strong>Bienvenue sur MTS AI Hub !</strong><br>
+                • <strong>Première visite ?</strong> Cliquez sur l'une des 10 cartes ci-dessous pour ouvrir un espace de travail dédié.<br>
+                • <strong>Pour les enseignants :</strong> Découvrez le <em>Module 1 (Assistant BEF)</em> pour générer un plan CUA ou le <em>Module 6 (Suppléance & Daybook)</em> pour imprimer votre feuille de journée.<br>
+                • <strong>Pour les élèves :</strong> Rendez-vous sur le <em>Module 2 (Tuteur Socratique)</em> pour réviser avec un accompagnement pas-à-pas bienveillant.<br>
+                • <em>Note : Vous pouvez masquer ces repères à tout moment via le commutateur dans la barre latérale gauche.</em>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     c_k1, c_k2, c_k3, c_k4 = st.columns(4)
     c_k1.metric("Couverture Provinciale", "10 Modules", "Membres MTS & DSFM")
@@ -519,8 +580,8 @@ if "Accueil" in navigation_espace:
     with r2_c1:
         st.markdown(
             """<div class="module-card">
-                <div><h4>🔄 6. Suppléance ERP</h4><p>Dossier prêt à 8 h 15, protocole Atrieve et continuité de classe sans rupture.</p></div>
-                <small>Public : Suppléants</small>
+                <div><h4>🔄 6. Suppléance ERP</h4><p>Dossier prêt à 8 h 15, Daybook cycle 6 jours et continuité sans rupture.</p></div>
+                <small>Public : Titulaires & Suppléants</small>
             </div>""", unsafe_allow_html=True
         )
         if st.button("Ouvrir 6 ➔", key="btn_m6", use_container_width=True):
@@ -579,6 +640,17 @@ elif "Assistant BEF" in navigation_espace:
     st.title("👩‍🏫 Module 1 : Assistant Pédagogique BEF / MTS")
     st.caption("Génération de plans de leçon CUA différenciés, évaluations formatives et gestion de classeur NotebookLM")
 
+    if st.session_state.guide_interactif:
+        st.markdown(
+            """
+            <div class="guide-box">
+                🎯 <strong>Guide Enseignant :</strong> Ce module vous fait gagner ~2 h de préparation par leçon.
+                Renseignez le code ministériel BEF (Étape 1), ajustez vos besoins d'inclusion (Étape 2), puis cliquez sur le bouton rouge pour obtenir un plan de cours complet en 4 phases.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
     tab_bef, tab_eval, tab_notebook, tab_video = st.tabs([
         "📋 Planification Différenciée (BEF / PAT / Défi)",
         "📊 Évaluation Formative & par les Pairs",
@@ -590,12 +662,34 @@ elif "Assistant BEF" in navigation_espace:
         st.subheader("Générateur de Leçon Curriculaire Trifide")
         col_t1, col_t2 = st.columns(2)
         with col_t1:
-            ras_input = st.text_input("Code RAS BEF :", value="B12-2-03 (Lois de Mendel)")
-            sujet_lecon = st.text_input("Sujet de la leçon :", value="Monohybridisme et grilles de Punnett")
+            if st.session_state.guide_interactif:
+                st.markdown('<span class="guide-badge">📍 Étape 1 : Le Cadre Ministériel</span>', unsafe_allow_html=True)
+            ras_input = st.text_input(
+                "Code RAS BEF :",
+                value="B12-2-03 (Lois de Mendel)",
+                help="Saisissez le code officiel du résultat d'apprentissage manitobain (ex. B12-2-03 pour la bio, M10-3 pour les maths)."
+            )
+            sujet_lecon = st.text_input(
+                "Sujet de la leçon :",
+                value="Monohybridisme et grilles de Punnett",
+                help="Thème précis de votre séquence d'enseignement de 60 minutes."
+            )
         with col_t2:
-            profil_pat = st.text_area("Adaptations PAT (Dyslexie / Visuel) :", value="2 élèves en PAT (textes aérés, étayage visuel).")
-            profil_avance = st.text_area("Enrichissement (Élèves avancés) :", value="3 élèves très rapides (probabilités mendéliennes complexes).")
+            if st.session_state.guide_interactif:
+                st.markdown('<span class="guide-badge">📍 Étape 2 : L\'Inclusion & Différenciation</span>', unsafe_allow_html=True)
+            profil_pat = st.text_area(
+                "Adaptations PAT (Dyslexie / Visuel) :",
+                value="2 élèves en PAT (textes aérés, étayage visuel).",
+                help="Spécifiez les aménagements nécessaires pour vos élèves à besoins particuliers (sans données nominatives, conforme FIPPA)."
+            )
+            profil_avance = st.text_area(
+                "Enrichissement (Élèves avancés) :",
+                value="3 élèves très rapides (probabilités mendéliennes complexes).",
+                help="Précisez ce que l'IA doit concevoir pour nourrir les élèves à haut potentiel ou très rapides."
+            )
 
+        if st.session_state.guide_interactif:
+            st.markdown('<span class="guide-badge">📍 Étape 3 : Génération en un clic</span>', unsafe_allow_html=True)
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             l_btn = st.button("🚀 Générer la leçon multiniveau complète", type="primary", use_container_width=True)
@@ -638,7 +732,7 @@ elif "Assistant BEF" in navigation_espace:
     with tab_eval:
         st.subheader("📊 Évaluations Formatives & par les Pairs (Normes BEF / MTS)")
         type_eval = st.radio("Type d'instrument :", ["🎟️ Billet de Sortie Flash (3 min)", "👥 Grille d'Évaluation par les Pairs (Deux étoiles et un souhait)", "🎯 Sonde Diagnostique Rapide"], horizontal=True)
-        sujet_eval = st.text_input("Notion ciblée :", value="L'analyse des allèles dominants et récessifs")
+        sujet_eval = st.text_input("Notion ciblée :", value="L'analyse des allèles dominants et récessifs", help="Le concept précis que vous voulez vérifier avant la fin de l'heure.")
         if st.button("✨ Générer l'outil d'évaluation", type="primary"):
             with st.spinner("Conception de l'instrument d'évaluation…"):
                 eval_p = f"Crée un outil d'évaluation formatif conforme aux normes manitobaines. Type : {type_eval}. Matière : {course_name}. Sujet : {sujet_eval}."
@@ -649,7 +743,7 @@ elif "Assistant BEF" in navigation_espace:
         st.subheader("📚 Mon Classeur de Cours (Esprit NotebookLM)")
         custom_folder = DOCS_DIR / course["folder"] / "custom_teacher"
         custom_folder.mkdir(parents=True, exist_ok=True)
-        up_files = st.file_uploader("Ajouter des PDF personnels de cours :", type=["pdf"], accept_multiple_files=True)
+        up_files = st.file_uploader("Ajouter des PDF personnels de cours :", type=["pdf"], accept_multiple_files=True, help="Uploadez vos propres feuilles d'exercices ou guides : l'IA s'en servira prioritairement.")
         if up_files:
             for f in up_files:
                 with open(custom_folder / f.name, "wb") as buffer:
@@ -673,6 +767,19 @@ elif "Assistant BEF" in navigation_espace:
 elif "Tuteur Socratique" in navigation_espace:
     st.title(f"🎓 Module 2 : Tuteur Socratique MTS AI — {course_name}")
     st.caption("Accompagnement pédagogique socratique · Guidage pas-à-pas sans réponse directe")
+
+    if st.session_state.guide_interactif:
+        st.markdown(
+            """
+            <div class="guide-box">
+                👋 <strong>Comment travailler avec ton tuteur socratique :</strong><br>
+                • <strong>Règle d'or :</strong> Le tuteur ne te donnera pas la solution toute faite. Il te pose des questions pour t'aider à raisonner par toi-même.<br>
+                • <strong>Pour répondre :</strong> Écris ta réponse dans la barre tout en bas ou utilise le micro dans la barre de gauche pour parler.<br>
+                • <strong>En cas de blocage :</strong> Clique sur les boutons bleus d'étayage rapide (ex. <em>« Expliquer simplement »</em> ou <em>« Exemple concret »</em>).
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     if course_name not in st.session_state.histories_by_course:
         st.session_state.histories_by_course[course_name] = [{"role": "assistant", "content": course["welcome"]}]
@@ -918,7 +1025,7 @@ def frequence_alleles(nb_dominants, nb_recessifs):
 # Test
 print("Fréquence allèle dominant :", frequence_alleles(60, 40))
 """
-    code_eleve = st.text_area("Éditeur de code Python :", value=code_init, height=180)
+    code_eleve = st.text_area("Éditeur de code Python :", value=code_init, height=180, help="Saisissez ou collez votre script Python. Vous pouvez l'exécuter directement en toute sécurité.")
 
     col_run, col_soc = st.columns(2)
     with col_run:
@@ -952,45 +1059,297 @@ print("Fréquence allèle dominant :", frequence_alleles(60, 40))
 
 
 # =============================================================================
-# MODULE 6 : SUPPLÉANCE & ERP ATRIEVE
+# MODULE 6 : SUPPLÉANCE, DAYBOOK & ERP ATRIEVE (REFONTE INTÉGRALE)
 # =============================================================================
 elif "Suppléance & ERP" in navigation_espace:
-    st.title("🔄 Module 6 : Suppléance Express & Intégration ERP Atrieve")
-    st.caption("Plan d'urgence prêt à 8 h 15, protocoles de sécurité et continuité curriculaire lors des remplacements")
+    st.title("🔄 Module 6 : Cartable de Suppléance & Intégration Atrieve ERP")
+    st.caption("Génération en un clic des fiches de journée (Cycle de 6 jours ou Secondaire par périodes) et protocoles d'urgence")
 
-    col_ec1, col_ec2 = st.columns(2)
-    with col_ec1:
-        ecole_sel = st.selectbox("Division & Établissement au Manitoba :", [
-            "Collège Louis-Riel (DSFM - Winnipeg)", 
-            "École Saint-Joachim (DSFM - La Broquerie)", 
-            "École Pointe-des-Chênes (DSFM - Sainte-Anne)", 
-            "École Réal-Bérard (DSFM - Saint-Pierre-Jolys)",
-            "Vincent Massey Collegiate (Pembina Trails)",
-            "Glenlawn Collegiate (Louis Riel School Division)"
-        ])
-        classe_suppl = st.selectbox("Période et matière du remplacement :", [
-            "Période 2 — Biologie 40S", 
-            "Période 3 — Mathématiques Pré-calcul 30S", 
-            "Période 4 — Informatique 40S"
-        ])
-    with col_ec2:
-        code_mission = st.text_input("Code de mission Atrieve ERP :", value="SUB-2026-MTS-8821")
-        consigne_particuliere = st.text_input("Consigne spéciale laissée par le titulaire :", value="Les élèves doivent terminer les exercices sur l'hérédité mendélienne.")
+    if st.session_state.guide_interactif:
+        st.markdown(
+            """
+            <div class="guide-box">
+                📌 <strong>Comment utiliser le Cartable de Suppléance (Daybook) :</strong><br>
+                1. <strong>Choisissez votre palier :</strong> Onglet <em>M à 8e</em> pour les classes élémentaires (Cycle manitobain de 6 jours) ou <em>Secondaire</em> pour les collèges (découpage par périodes de 75 min).<br>
+                2. <strong>Ajustez les détails :</strong> Saisissez les surveillances de cour et les consignes particulières.<br>
+                3. <strong>Cliquez sur Imprimer :</strong> Le bouton bleu ouvre directement l'aperçu propre pour insérer la feuille dans votre classeur de table physique.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    if st.button("📋 Générer le Dossier de Suppléance Express (Prêt en 30 secondes)", type="primary"):
-        with st.spinner("Compilation du dossier de remplacement…"):
-            p_sub = (
-                f"Tu es le directeur adjoint responsable des suppléances au Manitoba ({ecole_sel}).\n"
-                f"Génère une fiche de suppléance d'urgence claire et rassurante pour un enseignant suppléant non-spécialiste prenant en charge : {classe_suppl}.\n"
-                f"Consigne du titulaire : {consigne_particuliere}\n\n"
-                "Structure attendue :\n"
-                "1. 📍 Repères de sécurité école (Lieu des trousses de premiers soins, protocole d'évacuation, numéro du bureau de direction).\n"
-                "2. ⏱️ Déroulé de la période de 60 minutes pas-à-pas (clé en main).\n"
-                "3. 🤝 Soutien inclusion (Rôle de l'auxiliaire EA présent dans la classe et adaptations prioritaires discrètes).\n"
-                "4. 📝 Billet de liaison à laisser sur le bureau du titulaire à 15 h 30.\n"
-            )
-            res_sub = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": p_sub}], temperature=0.3)
-            st.markdown(res_sub.choices[0].message.content)
+    tab_elem, tab_sec, tab_atrieve = st.tabs([
+        "🎒 Cartable M à 8e (Cycle 6 Jours)",
+        "🏛️ Cartable Secondaire 9e à 12e (Par Périodes)",
+        "⚡ Protocole d'Urgence Atrieve (8 h 15)"
+    ])
+
+    # -------------------------------------------------------------------------
+    # GABARIT 1 : MATERNELLE AU 8E (CYCLE DE 6 JOURS - MODÈLE SAINT-ALBERT)
+    # -------------------------------------------------------------------------
+    with tab_elem:
+        st.subheader("📋 Générateur de Daybook — Élémentaire & Intermédiaire (M à 8e)")
+        st.write("Ce modèle reproduit fidèlement la grille de classe avec le cycle de 6 jours[cite: 4, 5], les routines et la gestion multi-niveaux[cite: 7].")
+
+        col_e1, col_e2, col_e3 = st.columns(3)
+        with col_e1:
+            ecole_elem = st.selectbox("Établissement :", [
+                "École Saint-Albert (Winnipeg)",
+                "École Pointe-des-Chênes (Sainte-Anne)",
+                "École Saint-Joachim (La Broquerie)",
+                "École Réal-Bérard (Saint-Pierre-Jolys)",
+                "École Précieux-Sang (Winnipeg)"
+            ], key="elem_ecole", help="Nom de l'école hôte apparaissant dans l'en-tête officiel.")
+            date_elem = st.text_input("Date du jour :", value="Vendredi 25 septembre", key="elem_date", help="Date de la journée de remplacement.")[cite: 6]
+        with col_e2:
+            cycle_elem = st.selectbox("Jour du cycle manitobain :", [
+                "JOUR 1", "JOUR 2", "JOUR 3", "JOUR 4", "JOUR 5", "JOUR 6"
+            ], index=1, key="elem_cycle", help="Indiquez le jour officiel du cycle de 6 jours du Manitoba.")[cite: 4, 5, 6]
+            classe_elem = st.text_input("Niveau / Classe :", value="3e / 4e année combinée", key="elem_classe", help="Exemple : 5e année, ou classe multi-niveaux 3e/4e.")[cite: 7]
+        with col_e3:
+            surveillance_elem = st.text_input("Surveillance récréation :", value="14 h 05 - 14 h 20 : Extérieur (Cour principale)", key="elem_surv", help="Plage de surveillance de cour assignée (apparaîtra en rouge sur la fiche).")[cite: 4, 7]
+            consigne_entree = st.text_input("Consigne d'ouverture :", value="Entrée des élèves : Ne pas laisser travailler dans les couloirs.", key="elem_entree", help="Consigne de sécurité affichée en haut de page pour le suppléant.")[cite: 4]
+
+        st.markdown("##### 📝 Détail des périodes et consignes de travail :")
+        c_m1, c_m2 = st.columns(2)
+        with c_m1:
+            mat_fr = st.text_area("Français / UFLI (Matin) :", value="Français : Vocabulaire 'an/en'. Cahiers d'écriture. Theo a besoin d'encouragement pour débuter.", height=85, help="Travail prévu en littératie ou phonétique.")[cite: 5, 7]
+            mat_math = st.text_area("Mathématiques (Matin) :", value="Stratégies d'addition 3 et 4. Les 3e travaillent dans les duo-tangs bleus, les 4e sur les fiches roses.", height=85, help="Consignes différenciées pour les mathématiques.")[cite: 5, 7]
+        with c_m2:
+            mat_apresmidi = st.text_area("Après-midi (Sciences / Univers social) :", value="12h35: Lecture autonome sur iPads (EPIC). 13h05: Sciences de la nature (Cahier L'École p. 12-14).", height=85, help="Activités autonomes et manuels de l'après-midi.")[cite: 4, 7]
+            mat_ela = st.text_area("E.L.A. / Clôture de journée :", value="14h20: Reading mystery 'Teacher Toads'. 15h10: Écrire les devoirs dans l'agenda et étamper.", height=85, help="Consignes d'anglais et routine de fin de classe.")[cite: 4]
+
+        if st.button("📄 Générer la Fiche Imprimable du Classeur (M à 8)", type="primary", use_container_width=True):
+            html_elem = f"""
+            <div style="font-family: Arial, sans-serif; background: #ffffff; color: #1e293b; padding: 25px; border-radius: 8px; border: 2px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px;">
+                    <div>
+                        <span style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">{cycle_elem}</span>
+                        <span style="font-size: 1.1rem; font-weight: 600; color: #475569; margin-left: 15px;">{ecole_elem} — Classe : {classe_elem}</span>
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">{date_elem}</div>
+                </div>
+
+                <div style="margin-bottom: 10px; font-size: 0.9rem; background: #f8fafc; padding: 8px; border-left: 4px solid #3b82f6;">
+                    <strong>Bonjour !</strong> {consigne_entree}
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 15px;">
+                    <thead>
+                        <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                            <th style="border: 1px solid #cbd5e1; padding: 8px; width: 15%; text-align: left;">Horaire</th>
+                            <th style="border: 1px solid #cbd5e1; padding: 8px; width: 25%; text-align: left;">Matière</th>
+                            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">Consignes pour le / la suppléant(e)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">8h40 - 8h50</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Exercices d'ouverture</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Prise des présences, hymne national, routine de classe.</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">8h50 - 9h50</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Français / UFLI</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">{mat_fr}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">9h50 - 10h20</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Mathématiques</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">{mat_math}</td>
+                        </tr>
+                        <tr style="background: #fee2e2;">
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; color: #991b1b;">10h20 - 10h35</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; color: #991b1b;">Récréation</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; color: #991b1b;">⚠️ SURVEILLANCE : {surveillance_elem}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">10h35 - 11h35</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Éd. Physique / Spécialité</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Accompagner les élèves au gymnase ou à la bibliothèque avec le spécialiste.</td>
+                        </tr>
+                        <tr style="background: #f1f5f9;">
+                            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; font-weight: bold;" colspan="3">11h35 - 12h35 : DÎNER-MIDI</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">12h35 - 13h05</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Lecture & Écriture</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Retour au calme. {mat_apresmidi}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">13h05 - 14h05</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Sciences de la nature</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">Travail en duo autorisé. Feuilles d'activités supplémentaires sur la table du fond.</td>
+                        </tr>
+                        <tr style="background: #fee2e2;">
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; color: #991b1b;">14h05 - 14h20</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; color: #991b1b;">Récréation</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; color: #991b1b;">⚠️ SURVEILLANCE : {surveillance_elem}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;">14h20 - 15h20</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">E.L.A. & Départ</td>
+                            <td style="border: 1px solid #cbd5e1; padding: 6px;">{mat_ela}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="border: 1px dashed #64748b; padding: 10px; background: #fafafa; border-radius: 4px;">
+                    <div style="font-weight: bold; font-size: 0.88rem; margin-bottom: 4px; color: #334155;">📝 Billet de liaison du suppléant (à laisser sur le bureau à 15h30) :</div>
+                    <div style="font-size: 0.82rem; color: #64748b; min-height: 45px;">
+                        • Élèves absents : ________________________________________________________________<br>
+                        • Déroulement général : [ &nbsp; ] Très bien &nbsp;&nbsp; [ &nbsp; ] Correct &nbsp;&nbsp; [ &nbsp; ] Difficile<br>
+                        • Notes particulières pour le titulaire : __________________________________________________
+                    </div>
+                    <div style="text-align: right; font-weight: bold; font-size: 0.85rem; color: #0f172a; margin-top: 5px;">Merci et bonne journée !</div>
+                </div>
+            </div>
+            """
+            st.markdown(html_elem, unsafe_allow_html=True)
+            components.html("<script>function imprimer(){ window.print(); }</script><button onclick='imprimer()' style='margin-top:12px; padding:9px 18px; background:#1e3a8a; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;'>🖨️ Imprimer la feuille pour le classeur (Format A4/Lettre)</button>", height=55)
+
+    # -------------------------------------------------------------------------
+    # GABARIT 2 : SECONDAIRE / COLLÈGE (9E À 12E ANNÉE - PAR PÉRIODES)
+    # -------------------------------------------------------------------------
+    with tab_sec:
+        st.subheader("🏛️ Générateur de Daybook — Secondaire / Collège (9e à 12e)")
+        st.write("Ce modèle organise la suppléance selon les grandes périodes curriculaires, les locaux de spécialité et les politiques d'école.")
+
+        col_s1, col_s2, col_s3 = st.columns(3)
+        with col_s1:
+            ecole_sec = st.selectbox("Établissement Secondaire :", [
+                "Collège Louis-Riel (Winnipeg)",
+                "Collège Pierre-Elliott-Trudeau (Transcona)",
+                "Vincent Massey Collegiate (Pembina Trails)",
+                "Glenlawn Collegiate (Louis Riel SD)",
+                "École régionale Gabrielle-Roy (Île-des-Chênes)"
+            ], key="sec_ecole", help="Collège secondaire où a lieu le remplacement.")
+            date_sec = st.text_input("Date :", value="Lundi 28 octobre", key="sec_date")
+        with col_s2:
+            titulaire_sec = st.text_input("Enseignant(e) titulaire :", value="M. KHALIFA (Sciences & STIAM)", key="sec_titulaire", help="Nom du professeur remplacé.")
+            local_base = st.text_input("Local d'accueil / Bureau :", value="Salle 204 (Clé au secrétariat)", key="sec_local", help="Où se rendre à l'arrivée le matin.")
+        with col_s3:
+            surv_sec = st.text_input("Surveillance / Devoir de corridor :", value="11 h 30 - 11 h 50 : Cafétéria Nord", key="sec_surv", help="Plage de surveillance cafétéria ou corridor assignée au suppléant.")
+            politique_sec = st.text_input("Règles spéciales :", value="Cellulaires interdits en classe. Présences obligatoires sur PowerSchool.", key="sec_pol", help="Directives d'école sur les appareils mobiles et le portail de présences.")
+
+        st.markdown("##### 🔬 Contenu des Périodes du Secondaire :")
+        sp_c1, sp_c2 = st.columns(2)
+        with sp_c1:
+            p1_info = st.text_area("Période 1 (8h50 - 10h05) :", value="Biologie 40S (Salle 204) : Exercices génétique mendélienne p. 142. Travail autonome individuel. Adam et Sophie peuvent étayer les pairs.", height=85)
+            p2_info = st.text_area("Période 2 (10h15 - 11h30) :", value="Informatique 40S (Labo STIAM 108) : Défi Python sur les fonctions. Ouvrir le bac à sable MTS AI. Aucun accès aux jeux vidéo.", height=85)
+        with sp_c2:
+            p3_info = st.text_area("Période 3 (12h35 - 13h50) :", value="Mathématiques Pré-calcul 30S (Salle 204) : Chapitre 4 (Trigonométrie). Feuille d'exercices laissée sur le bureau.", height=85)
+            p4_info = st.text_area("Période 4 (14h00 - 15h15) :", value="Période de préparation / Remplacement interne assigné par la direction. Se présenter au secrétariat si disponible.", height=85)
+
+        if st.button("📄 Générer la Fiche Imprimable du Collège (9e à 12e)", type="primary", use_container_width=True):
+            html_sec = f"""
+            <div style="font-family: Arial, sans-serif; background: #ffffff; color: #0f172a; padding: 25px; border-radius: 8px; border: 2px solid #334155;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 1.4rem; font-weight: 800; color: #1e3a8a;">{ecole_sec}</div>
+                        <div style="font-size: 1rem; color: #475569; font-weight: 600;">Dossier de Suppléance — Titulaire : {titulaire_sec} | Local : {local_base}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.1rem; font-weight: 700;">{date_sec}</div>
+                        <span style="background: #e2e8f0; color: #0f172a; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">Secondaire (9e-12e)</span>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px; font-size: 0.88rem; margin-bottom: 15px;">
+                    <strong>📌 Consignes et protocoles :</strong> {politique_sec}
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 15px;">
+                    <thead>
+                        <tr style="background: #1e293b; color: white;">
+                            <th style="padding: 8px; width: 18%; text-align: left;">Période / Horaire</th>
+                            <th style="padding: 8px; width: 25%; text-align: left;">Cours & Local</th>
+                            <th style="padding: 8px; text-align: left;">Plan de travail & Objectifs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #cbd5e1;">
+                            <td style="padding: 8px; font-weight: bold;">Période 1<br><span style="font-size: 0.8rem; color: #64748b;">8h50 - 10h05</span></td>
+                            <td style="padding: 8px; font-weight: 600; color: #1e3a8a;">Biologie 40S<br><small style="color: #64748b;">Salle 204</small></td>
+                            <td style="padding: 8px;">{p1_info}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #cbd5e1;">
+                            <td style="padding: 8px; font-weight: bold;">Période 2<br><span style="font-size: 0.8rem; color: #64748b;">10h15 - 11h30</span></td>
+                            <td style="padding: 8px; font-weight: 600; color: #1e3a8a;">Informatique 40S<br><small style="color: #64748b;">Labo STIAM 108</small></td>
+                            <td style="padding: 8px;">{p2_info}</td>
+                        </tr>
+                        <tr style="background: #fee2e2; border-bottom: 1px solid #fca5a5;">
+                            <td style="padding: 8px; font-weight: bold; color: #991b1b;">Dîner & Service<br><span style="font-size: 0.8rem;">11h30 - 12h35</span></td>
+                            <td style="padding: 8px; font-weight: bold; color: #991b1b;">Surveillance assignée</td>
+                            <td style="padding: 8px; font-weight: bold; color: #991b1b;">⚠️ {surv_sec} (Prendre la veste haute visibilité au bureau).</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #cbd5e1;">
+                            <td style="padding: 8px; font-weight: bold;">Période 3<br><span style="font-size: 0.8rem; color: #64748b;">12h35 - 13h50</span></td>
+                            <td style="padding: 8px; font-weight: 600; color: #1e3a8a;">Mathématiques 30S<br><small style="color: #64748b;">Salle 204</small></td>
+                            <td style="padding: 8px;">{p3_info}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #cbd5e1;">
+                            <td style="padding: 8px; font-weight: bold;">Période 4<br><span style="font-size: 0.8rem; color: #64748b;">14h00 - 15h15</span></td>
+                            <td style="padding: 8px; font-weight: 600; color: #1e3a8a;">Préparation / Relève<br><small style="color: #64748b;">Local assigné</small></td>
+                            <td style="padding: 8px;">{p4_info}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="border: 1px dashed #64748b; padding: 10px; background: #fafafa; border-radius: 4px;">
+                    <div style="font-weight: bold; font-size: 0.88rem; margin-bottom: 4px; color: #334155;">📝 Rapport de fin de journée pour M. KHALIFA :</div>
+                    <div style="font-size: 0.82rem; color: #64748b; min-height: 40px;">
+                        • Présences complétées sur le portail : [ &nbsp; ] Oui &nbsp;&nbsp; [ &nbsp; ] Formulaire papier laissé au bureau<br>
+                        • Notations sur le comportement / travaux remis : _______________________________________________<br>
+                        • Clé retournée au secrétariat : [ &nbsp; ] Oui &nbsp;&nbsp; Signature : ________________________
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(html_sec, unsafe_allow_html=True)
+            components.html("<script>function imprimerSec(){ window.print(); }</script><button onclick='imprimerSec()' style='margin-top:12px; padding:9px 18px; background:#0f172a; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;'>🖨️ Imprimer la fiche Collège (Format A4/Lettre)</button>", height=55)
+
+    # -------------------------------------------------------------------------
+    # TAB 3 : PROTOCOLE D'URGENCE ATRIEVE ERP (GÉNÉRATION IA À 8 H 15)
+    # -------------------------------------------------------------------------
+    with tab_atrieve:
+        st.subheader("⚡ Synthèse Express Atrieve ERP (Prêt à 8 h 15)")
+        st.caption("Génération automatique par l'IA d'un résumé de mission pour un suppléant arrivant sans préparation.")
+
+        col_ec1, col_ec2 = st.columns(2)
+        with col_ec1:
+            ecole_sel = st.selectbox("Établissement demandeur :", [
+                "Collège Louis-Riel (DSFM - Winnipeg)", 
+                "École Saint-Joachim (DSFM - La Broquerie)", 
+                "École Pointe-des-Chênes (DSFM - Sainte-Anne)", 
+                "École Réal-Bérard (DSFM - Saint-Pierre-Jolys)",
+                "École Saint-Albert (DSFM - Winnipeg)",
+                "Vincent Massey Collegiate (Pembina Trails)"
+            ], key="atrieve_ecole")
+            classe_suppl = st.selectbox("Période et matière du remplacement :", [
+                "Période 2 — Biologie 40S", 
+                "Période 3 — Mathématiques Pré-calcul 30S", 
+                "Période 4 — Informatique 40S",
+                "Journée complète — 3e/4e année combinée"
+            ], key="atrieve_classe")
+        with col_ec2:
+            code_mission = st.text_input("Code de mission Atrieve ERP :", value="SUB-2026-MTS-8821")
+            consigne_particuliere = st.text_input("Consigne spéciale laissée par le titulaire :", value="Les élèves doivent terminer les exercices sur l'hérédité mendélienne.")
+
+        if st.button("📋 Générer le Briefing d'Urgence Express (30 secondes)", type="primary"):
+            with st.spinner("Compilation du dossier de remplacement…"):
+                p_sub = (
+                    f"Tu es le directeur adjoint responsable des suppléances au Manitoba ({ecole_sel}).\n"
+                    f"Génère une fiche de suppléance d'urgence claire et rassurante pour un enseignant suppléant non-spécialiste prenant en charge : {classe_suppl}.\n"
+                    f"Consigne du titulaire : {consigne_particuliere}\n\n"
+                    "Structure attendue :\n"
+                    "1. 📍 Repères de sécurité école (Lieu des trousses de premiers soins, protocole d'évacuation, numéro du bureau de direction).\n"
+                    "2. ⏱️ Déroulé de la période de 60 minutes pas-à-pas (clé en main).\n"
+                    "3. 🤝 Soutien inclusion (Rôle de l'auxiliaire EA présent dans la classe et adaptations prioritaires discrètes).\n"
+                    "4. 📝 Billet de liaison à laisser sur le bureau du titulaire à 15 h 30.\n"
+                )
+                res_sub = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": p_sub}], temperature=0.3)
+                st.markdown(res_sub.choices[0].message.content)
 
 
 # =============================================================================
@@ -1003,7 +1362,8 @@ elif "Auxiliaires EA" in navigation_espace:
     contenu_c = st.text_area(
         "Tâche demandée à l'élève sous PAT / IEP :",
         value="Résolution autonome de 4 problèmes de croisements génétiques (grilles de Punnett) en Biologie 40S.",
-        height=90
+        height=90,
+        help="Description succincte de l'exercice pour lequel l'auxiliaire intervient."
     )
 
     if st.button("📋 Générer la Fiche de Mission Auxiliaire (30 secondes)", type="primary"):
